@@ -1,0 +1,226 @@
+========================
+1️⃣ Partie Utilisateur
+========================
+
+Class: User
+- id
+- name
+- email
+- password
+- phone
+- photo
+- city
+- address
+- description
+- role (CLIENT | PATISSIERE | LIVREUR | ADMIN | SUPERADMIN)
+- status (active | suspended)
+- createdAt
+
+Class: Permissions
+- id
+- name (e.g., "create_product", "accept_order", "view_all_orders")
+- description
+
+Class: RolePermissions
+- role (CLIENT | PATISSIERE ...)
+- permissionId
+
+Class: Client extends User
+- walletBalance
+- ordersIds[] (String[])
+- ratingAverage (Nim)
+
+Class: Patissiere extends User
+- bio
+- followersCount
+- ratingAverage
+- completedOrdersCount
+- products[] (Product)
+- earnings
+
+Class: Livreur extends User
+- vehicleType
+- ratingAverage
+- deliveriesCompleted (le nombre de livraisons que le livreur a terminées avec succès)
+- earnings
+
+Class: Admin / Manager extends User
+- permissions
+
+Class: SuperAdmin extends Admin
+- fullAccess
+
+========================
+2️⃣ Gestion des gâteaux (Produit)
+========================
+
+Class: Product
+- id
+- title
+- description
+- price
+- images[]
+- personalizationOptions
+- patissiereId
+- rating
+- isActive
+- createdAt
+
+Class: Category
+- id
+- name
+- description
+
+========================
+3️⃣ Commandes & Process
+========================
+
+Class: Order
+- id
+- clientId
+- patissiereId
+- productId
+- status (pending | accepted | refused | preparing | delivering | delivered)
+- customizationDetails
+    - colors
+    - garniture
+    - message
+    - dateTime
+- totalPrice
+- createdAt
+
+Class: OrderStatusHistory
+- id
+- orderId
+- status
+- changedAt
+
+========================
+4️⃣ Livraison (type InDrive)
+========================
+
+Class: Delivery
+- id
+- orderId
+- livreurId
+- startLocation
+- destination
+- distance
+- status (pending | in_progress | delivered)
+
+Class: DeliveryProposal
+- id
+- deliveryId
+- livreurId
+- proposedPrice
+- status (pending | accepted | refused)
+
+========================
+5️⃣ Paiement & Argent (Escrow)
+========================
+
+Class: Payment
+- id
+- orderId
+- clientId
+- amount
+- paymentMethod (card | wallet)
+- status (blocked | released | refunded)
+- createdAt
+
+Class: Transaction
+- id
+- userId
+- type (earning | commission | withdrawal)
+- amount
+- relatedOrderId
+- createdAt
+
+Class: Commission
+- id
+- type (order | delivery)
+- percentage
+
+Class: Withdrawal
+- id
+- userId
+- amount
+- status (pending | approved | rejected)
+- requestedAt
+
+========================
+6️⃣ Notation & Réputation
+========================
+
+Class: Rating
+- id
+- fromUserId
+- toUserId
+- orderId?
+- productId?
+- stars
+- comment?
+- createdAt
+
+Class: Like
+- id
+- userId
+- productId
+- createdAt
+
+Class: Follower
+- id
+- clientId
+- patissiereId
+
+========================
+7️⃣ Communication & Notifications
+========================
+
+Class: Chat
+- id
+- participants[] (User)
+
+Class: Message
+- id
+- chatId
+- senderId
+- content
+- sentAt
+
+Class: Notification
+- id
+- userId
+- title
+- message
+- type
+- isRead
+- createdAt
+
+========================
+8️⃣ Litiges & Réclamations
+========================
+
+Class: Dispute
+- id
+- orderId
+- openedBy
+- reason
+- status (open | resolved)
+- adminDecision
+- createdAt
+
+========================
+9️⃣ Dashboard & Analytics
+========================
+
+Class: Statistics
+- totalUsers
+- totalClients
+- totalPatissieres
+- totalLivreurs
+- totalOrders
+- totalRevenue
+- satisfactionRate
+- topPatissieres[]
+- topLivreurs[]

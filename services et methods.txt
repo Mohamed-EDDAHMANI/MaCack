@@ -1,0 +1,227 @@
+1️⃣ Services Utilisateur
+== UserService
+
+register(userData) → inscrire un utilisateur
+
+login(credentials) → authentifier + JWT
+
+getProfile(userId) → récupérer profile
+
+updateProfile(userId, data) → modifier profile
+
+deactivateUser(userId) → désactiver compte
+
+getAllUsers(filters) → pour Admin
+
+== ClientService
+
+getOrders(clientId) → lister commandes
+
+createOrder(orderData) → créer commande
+
+trackOrder(orderId) → suivre commande
+
+rateUser(toUserId, ratingData) → noter pâtissière ou livreur
+
+== PatissiereService
+
+getProducts(patissiereId) → lister gâteaux
+
+createProduct(productData) → publier gâteau
+
+updateProduct(productId, data) → modifier gâteau
+
+deleteProduct(productId) → supprimer gâteau
+
+getOrders(patissiereId) → voir commandes reçues
+
+updateOrderStatus(orderId, status) → changer statut
+
+getStats(patissiereId) → statistiques individuelles
+
+== LivreurService
+
+getAvailableDeliveries() → commandes à livrer
+
+proposeDelivery(deliveryId, price) → proposer prix
+
+acceptDelivery(deliveryProposalId) → accepter livraison
+
+updateDeliveryStatus(deliveryId, status) → changer statut
+
+getEarnings(livreurId) → historique gains
+
+== AdminService / SuperAdminService
+
+getAllUsers(filters)
+
+suspendUser(userId)
+
+getAllOrders(filters)
+
+resolveDispute(disputeId, decision)
+
+configureCommission(type, percentage)
+
+getPlatformStats()
+
+2️⃣ Services Produit
+== ProductService
+
+createProduct(productData)
+
+updateProduct(productId, data)
+
+deleteProduct(productId)
+
+getProducts(filters) → filtrer par ville, prix, type, note
+
+getProductById(productId)
+
+== CategoryService
+
+createCategory(data)
+
+updateCategory(categoryId, data)
+
+deleteCategory(categoryId)
+
+getAllCategories()
+
+3️⃣ Services Commandes
+== OrderService
+
+createOrder(clientId, productId, options)
+
+getOrderById(orderId)
+
+getOrdersByUser(userId, role)
+
+updateOrderStatus(orderId, status)
+
+== OrderStatusHistoryService
+
+addStatusHistory(orderId, status)
+
+getOrderHistory(orderId)
+
+4️⃣ Services Livraison
+== DeliveryService
+
+getAvailableDeliveries()
+
+assignDelivery(orderId, livreurId)
+
+updateDeliveryStatus(deliveryId, status)
+
+DeliveryProposalService
+
+createProposal(deliveryId, livreurId, price)
+
+acceptProposal(proposalId)
+
+rejectProposal(proposalId)
+
+getProposalsByDelivery(deliveryId)
+
+5️⃣ Services Paiement & Argent
+== PaymentService
+
+createPayment(orderId, amount, method)
+
+releasePayment(orderId)
+
+refundPayment(orderId)
+
+== TransactionService
+
+recordTransaction(userId, type, amount, orderId)
+
+getTransactions(userId)
+
+== CommissionService
+
+setCommission(type, percentage)
+
+calculateCommission(amount, type)
+
+== WithdrawalService
+
+requestWithdrawal(userId, amount)
+
+approveWithdrawal(withdrawalId)
+
+rejectWithdrawal(withdrawalId)
+
+6️⃣ Services Notation & Réputation
+== RatingService
+
+addRating(fromUserId, toUserId, orderId, stars, comment)
+
+getRatings(userId)
+
+getAverageRating(userId)
+
+== LikeService
+- addLike(userId, productId)           // l'utilisateur like un produit
+- removeLike(userId, productId)        // retirer le like
+- getLikesCount(productId)             // total des likes pour un produit
+- hasUserLiked(userId, productId)      // vérifier si un utilisateur a déjà liké
+
+
+== FollowerService
+
+followPatissiere(clientId, patissiereId)
+
+unfollowPatissiere(clientId, patissiereId)
+
+getFollowers(patissiereId)
+
+7️⃣ Services Communication & Notifications
+== ChatService
+
+createChat(participants)
+
+getChatById(chatId)
+
+getChatsByUser(userId)
+
+== MessageService
+
+sendMessage(chatId, senderId, content)
+
+getMessages(chatId)
+
+== NotificationService
+
+createNotification(userId, title, message, type)
+
+markAsRead(notificationId)
+
+getNotifications(userId)
+
+8️⃣ Service Litiges & Réclamations
+== DisputeService
+
+openDispute(orderId, openedBy, reason)
+
+getDisputeById(disputeId)
+
+resolveDispute(disputeId, decision)
+
+getAllDisputes(filters)
+
+9️⃣ Service Dashboard & Analytics
+== StatisticsService
+
+getUserStats() → nombre clients / pâtissières / livreurs actifs
+
+getOrderStats(period) → commandes par période
+
+getRevenueStats() → revenu total, commissions
+
+getTopPerformers(type) → top pâtissières ou livreurs
+
+getSatisfactionRate() → moyenne étoiles
+
+
