@@ -1,0 +1,147 @@
+<mxfile host="65bd71144e">
+    <diagram id="macack-architecture" name="MaCack Architecture">
+        <mxGraphModel dx="2144" dy="2212" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1169" pageHeight="827" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="client" value="&lt;font color=&quot;#000000&quot;&gt;Client / Mobile / Web&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="780" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="gateway" value="&lt;font color=&quot;#000000&quot;&gt;API Gateway&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="1" vertex="1">
+                    <mxGeometry x="480" y="780" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="auth-service" value="&lt;font color=&quot;#000000&quot;&gt;Auth / User Service&lt;br&gt;(User, Permissions)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="220" y="30" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="catalog-service" value="&lt;font color=&quot;#000000&quot;&gt;Catalog Service&lt;br&gt;(Product, Category)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="1250" y="230" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="orders-service" value="&lt;font color=&quot;#000000&quot;&gt;Order Service&lt;br&gt;(Order, OrderStatusHistory)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+                    <mxGeometry x="2100" y="70" width="220" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="payment-service" value="&lt;font color=&quot;#000000&quot;&gt;Payment Service&lt;br&gt;(Payment, Transaction, Commission, Withdrawal)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="920" y="1000" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="reputation-service" value="&lt;font color=&quot;#000000&quot;&gt;Reputation Service&lt;br&gt;(Rating, Like, Follower)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="1870" y="700" width="200" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="communication-service" value="&lt;font color=&quot;#000000&quot;&gt;Communication Service&lt;br&gt;(Chat, Message, Notification)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="990" y="1510" width="260" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="analytics-service" value="&lt;font color=&quot;#000000&quot;&gt;Analytics / Statistics Service&lt;br&gt;(Statistics)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="2110" y="1580" width="240" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-client-gateway" value="HTTP (REST / WebSocket)" style="endArrow=block;html=1;strokeColor=#6c8ebf;" parent="1" source="client" target="gateway" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-auth" value="&lt;span style=&quot;background-color: rgb(0, 0, 0);&quot;&gt;Auth / Profiles / JWT&lt;/span&gt;" style="endArrow=block;html=1;strokeColor=#82b366;" parent="1" source="gateway" target="auth-service" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-catalog" value="Catalog / Products / Categories" style="endArrow=block;html=1;strokeColor=#82b366;" parent="1" source="gateway" target="catalog-service" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-orders" value="Orders" style="endArrow=block;html=1;strokeColor=#82b366;" parent="1" source="gateway" target="orders-service" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-delivery" value="Deliveries" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="delivery-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-payment" value="Payments / Wallet / Withdrawals" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="payment-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-reputation" value="Ratings / Likes / Followers" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="reputation-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-communication" value="Chats / Messages / Notifications" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="communication-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-dispute" value="Disputes" style="endArrow=block;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="dispute-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-gateway-analytics" value="Dashboards / Statistics" style="endArrow=block;html=1;strokeColor=#82b366;startArrow=none;" edge="1" parent="1" source="dispute-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-catalog" value="getProductById / availability" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="catalog-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-auth" value="getProfile(client / pâtissière / livreur)" style="endArrow=block;html=1;dashed=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="auth-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-payment" value="createPayment / releasePayment / refundPayment" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="payment-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-delivery" value="assignDelivery(orderId, livreurId)" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="delivery-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-reputation" value="addRating (after delivered)" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="reputation-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-communication" value="order status notifications / chat creation" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="communication-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-orders-analytics" value="order events / KPIs" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="orders-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-delivery-communication" value="delivery status notifications" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="delivery-service" target="communication-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-delivery-analytics" value="delivery stats" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="delivery-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-payment-analytics" value="revenue / commissions / transactions" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="payment-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-dispute-payment" value="resolveDispute → refund / block" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="dispute-service" target="payment-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-dispute-communication" value="notify client / pâtissière / livreur / admin" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="dispute-service" target="communication-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-dispute-analytics" value="dispute stats" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="dispute-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-catalog-reputation" value="getAverageRating(product / pâtissière)" style="endArrow=block;html=1;dashed=1;strokeColor=#d6b656;" edge="1" parent="1" source="catalog-service" target="reputation-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-catalog-analytics" value="catalog stats" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="catalog-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-auth-analytics" value="user stats / active users" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="auth-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-auth-communication" value="security notifications" style="endArrow=block;html=1;dashed=1;strokeColor=#d6b656;startArrow=none;" edge="1" parent="1" source="delivery-service" target="communication-service">
+                    <mxGeometry x="-0.2147" y="-3" relative="1" as="geometry">
+                        <Array as="points"/>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e-reputation-analytics" value="ratings / satisfaction rate" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="reputation-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e-communication-analytics" value="usage of chat / notifications" style="endArrow=block;html=1;strokeColor=#d6b656;" edge="1" parent="1" source="communication-service" target="analytics-service">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="" style="endArrow=none;html=1;strokeColor=#82b366;" edge="1" parent="1" source="gateway" target="dispute-service">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="480.34482758620675" y="680" as="sourcePoint"/>
+                        <mxPoint x="1224.5977011494253" y="1050" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="dispute-service" value="&lt;font color=&quot;#000000&quot;&gt;Dispute Service&lt;br&gt;(Dispute)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="310" y="1640" width="170" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="4" value="" style="endArrow=none;html=1;dashed=1;strokeColor=#d6b656;" edge="1" parent="1" source="auth-service" target="delivery-service">
+                    <mxGeometry x="-0.2147" y="-3" relative="1" as="geometry">
+                        <Array as="points"/>
+                        <mxPoint as="offset"/>
+                        <mxPoint x="959.3902439024391" y="470" as="sourcePoint"/>
+                        <mxPoint x="1050.6097560975606" y="810" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="delivery-service" value="&lt;font color=&quot;#000000&quot;&gt;Delivery Service&lt;br&gt;(Delivery, DeliveryProposal)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" vertex="1" parent="1">
+                    <mxGeometry x="650" y="190" width="220" height="70" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

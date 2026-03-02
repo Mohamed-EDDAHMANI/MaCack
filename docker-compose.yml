@@ -110,18 +110,31 @@ services:
       context: ./catalog-service
       dockerfile: Dockerfile
     container_name: catalog-service-dev
-    command: sh -c "npx prisma generate && npm run start:dev"
+    command: npm run start:dev
     volumes:
       - ./catalog-service:/app
       - /app/node_modules
     environment:
-      DATABASE_URL: mongodb://root:password@mongodb:27017/catalog_db?authSource=admin
+      MONGODB_URI: mongodb://root:password@mongodb:27017/catalog_db?authSource=admin
       RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      RABBITMQ_CATALOG_QUEUE: catalog_queue
       REDIS_HOST: redis
       REDIS_PORT: 6379
+      TCP_PORT: 3002
+      PORT: 3002
+      HOST: catalog-service
       CHOKIDAR_USEPOLLING: "true"
+    deploy:
+      resources:
+        limits:
+          memory: 1G
     depends_on:
-      - gateway
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     networks:
       - macack-network
     ports:

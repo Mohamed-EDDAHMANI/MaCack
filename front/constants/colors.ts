@@ -1,0 +1,10 @@
+export const PRIMARY = "#da1b61";
+export const PRIMARY_DARK = "#b71552";
+export const BACKGROUND_LIGHT = "#f8f6f7";
+export const BACKGROUND_DARK = "#211117";
+export const SLATE_200 = "#e2e8f0";
+export const SLATE_400 = "#94a3b8";
+export const SLATE_500 = "#64748b";
+export const SLATE_600 = "#64748b";
+export const SLATE_700 = "#334155";
+export const SLATE_800 = "#1e293b";
