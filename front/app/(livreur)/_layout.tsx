@@ -2,7 +2,7 @@ import { Tabs } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
 import { PRIMARY, SLATE_400 } from "@/constants/colors";
 
-export default function Layout() {
+export default function LivreurLayout() {
   return (
     <Tabs
       screenOptions={{
@@ -24,43 +24,29 @@ export default function Layout() {
       <Tabs.Screen
         name="index"
         options={{
-          title: "Explore",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="explore" size={28} color={color} />
-          ),
+          title: "Available",
+          tabBarIcon: ({ color }) => <MaterialIcons name="local-shipping" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="search"
+        name="deliveries"
         options={{
-          title: "Search",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="search" size={28} color={color} />
-          ),
+          title: "Deliveries",
+          tabBarIcon: ({ color }) => <MaterialIcons name="inventory" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="favorites"
+        name="earnings"
         options={{
-          title: "Favorites",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="favorite" size={28} color={color} />
-          ),
+          title: "Earnings",
+          tabBarIcon: ({ color }) => <MaterialIcons name="account-balance-wallet" size={28} color={color} />,
         }}
       />
       <Tabs.Screen
-        name="login"
+        name="profile"
         options={{
-          title: "Login",
-          tabBarIcon: ({ color, size }) => (
-            <MaterialIcons name="account-circle" size={28} color={color} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="register"
-        options={{
-          href: null,
+          title: "Profile",
+          tabBarIcon: ({ color }) => <MaterialIcons name="person" size={28} color={color} />,
         }}
       />
     </Tabs>

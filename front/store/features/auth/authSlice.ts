@@ -18,6 +18,8 @@ export interface AuthUser {
   role: UserRole;
   status?: UserStatus;
   createdAt?: string;
+  photo?: string | null;
+  coverPhoto?: string | null;
 }
 
 // Auth-service success response data (login/register)

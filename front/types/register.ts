@@ -1,3 +1,5 @@
+import { DEFAULT_COUNTRY_MOROCCO, type CountryOption } from "@/lib/countries";
+
 // Align with auth-service: User + Client | Patissiere | Livreur
 export type RegisterRole = "CLIENT" | "PATISSIERE" | "LIVREUR";
 
@@ -8,7 +10,10 @@ export interface RegisterFormData {
   name: string;
   email: string;
   password: string;
+  /** National number only (no country code). Full phone = phoneCountry.dialCode + phone */
   phone: string;
+  /** Selected country for phone (flag + dial code) */
+  phoneCountry: CountryOption | null;
   photo: string | null;
   city: string;
   address: string;
@@ -24,6 +29,7 @@ export const DEFAULT_FORM_DATA: RegisterFormData = {
   email: "",
   password: "",
   phone: "",
+  phoneCountry: DEFAULT_COUNTRY_MOROCCO,
   photo: null,
   city: "",
   address: "",
@@ -31,5 +37,3 @@ export const DEFAULT_FORM_DATA: RegisterFormData = {
   bio: "",
   vehicleType: "",
 };
-
-export const CITIES = ["Paris", "Lyon", "Bordeaux", "Marseille", "Lille", "Casablanca", "Rabat", "Fes"];

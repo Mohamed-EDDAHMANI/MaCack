@@ -3,19 +3,26 @@ import { ThemeProvider, DefaultTheme } from "@react-navigation/native";
 import { Stack } from "expo-router";
 import { StatusBar } from "expo-status-bar";
 import { Provider } from "react-redux";
+import { PersistGate } from "redux-persist/integration/react";
 import "react-native-reanimated";
 
-import { store } from "@/store";
+import { store, persistor } from "@/store";
 
 export default function RootLayout() {
   return (
     <Provider store={store}>
-      <ThemeProvider value={DefaultTheme}>
-        <Stack screenOptions={{ headerShown: false }}>
-          <Stack.Screen name="(tabs)" />
-        </Stack>
-        <StatusBar style="light" />
-      </ThemeProvider>
+      <PersistGate loading={null} persistor={persistor}>
+        <ThemeProvider value={DefaultTheme}>
+          <Stack screenOptions={{ headerShown: false }}>
+            <Stack.Screen name="index" />
+            <Stack.Screen name="(auth)" />
+            <Stack.Screen name="(client)" />
+            <Stack.Screen name="(patissiere)" />
+            <Stack.Screen name="(livreur)" />
+          </Stack>
+          <StatusBar style="light" />
+        </ThemeProvider>
+      </PersistGate>
     </Provider>
   );
 }

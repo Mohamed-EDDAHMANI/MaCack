@@ -2,38 +2,86 @@ import { useState } from "react";
 import { View, Text, ScrollView, Pressable, StyleSheet } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import { SafeAreaView } from "react-native-safe-area-context";
-import { RegisterHeader } from "@/components/register/RegisterHeader";
-import { ProgressDots } from "@/components/register/ProgressDots";
-import { RoleStep } from "@/components/register/RoleStep";
-import { AccountDetailsStep } from "@/components/register/AccountDetailsStep";
+import { useRouter } from "expo-router";
+import { RegisterHeader } from "@/components/auth/RegisterHeader";
+import { ProgressDots } from "@/components/auth/ProgressDots";
+import { RoleStep } from "@/components/auth/RoleStep";
+import { AccountDetailsStep } from "@/components/auth/AccountDetailsStep";
 import { BACKGROUND_LIGHT, SLATE_500 } from "@/constants/colors";
 import {
   DEFAULT_FORM_DATA,
-  CITIES,
   type RegisterRole,
   type RegisterFormData,
   type RegisterStep,
 } from "@/types/register";
+import {
+  register as registerUser,
+  type RegisterPayload,
+  setCredentialsFromResponse,
+} from "@/store/features/auth";
+import { useAppDispatch } from "@/store/hooks";
 
 export default function RegisterScreen() {
+  const router = useRouter();
+  const dispatch = useAppDispatch();
+
   const [step, setStep] = useState<RegisterStep>(1);
   const [selectedRole, setSelectedRole] = useState<RegisterRole | null>(null);
   const [formData, setFormData] = useState<RegisterFormData>(DEFAULT_FORM_DATA);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<Array<{ field: string; message: string }> | null>(null);
 
   const handleContinueFromRole = () => {
     if (selectedRole) setStep(2);
   };
 
-  const handleSubmitAccountDetails = () => {
-    // TODO: call auth register API with { ...formData, role: selectedRole }
+  const handleSubmitAccountDetails = async () => {
+    if (!selectedRole || submitting) return;
+
+    setSubmitting(true);
+    setErrorMessage(null);
+    setFieldErrors(null);
+
+    const payload: RegisterPayload = {
+      name: formData.name.trim(),
+      email: formData.email.trim().toLowerCase(),
+      password: formData.password,
+      phone: formData.phone || undefined,
+      photo: formData.photo,
+      city: formData.city || undefined,
+      address: formData.address || undefined,
+      description: formData.description || undefined,
+      role: selectedRole,
+    };
+
+    try {
+      const response = await registerUser(payload);
+
+      if (response.success && response.data) {
+        dispatch(setCredentialsFromResponse(response));
+        // Redirect will happen automatically via root layout
+        router.replace("/");
+      } else {
+        if (response.errors && response.errors.length > 0) {
+          setFieldErrors(response.errors);
+        }
+        setErrorMessage(response.message || "Registration failed. Please try again.");
+      }
+    } catch (err: any) {
+      const data = err?.response?.data;
+      if (data?.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+        setFieldErrors(data.errors);
+      }
+      const msg = data?.message || err?.message || "Something went wrong. Please try again.";
+      setErrorMessage(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
-    <SafeAreaView
-      className="flex-1"
-      style={{ backgroundColor: BACKGROUND_LIGHT }}
-      edges={["top"]}
-    >
+    <SafeAreaView className="flex-1" style={{ backgroundColor: BACKGROUND_LIGHT }} edges={["top"]}>
       <RegisterHeader
         title="Create MaCack Account"
         onBack={step === 2 ? () => setStep(1) : undefined}
@@ -78,7 +126,9 @@ export default function RegisterScreen() {
           role={selectedRole}
           onChange={(partial) => setFormData((prev) => ({ ...prev, ...partial }))}
           onSubmit={handleSubmitAccountDetails}
-          cities={CITIES}
+          submitting={submitting}
+          errorMessage={errorMessage}
+          fieldErrors={fieldErrors}
         />
       )}
     </SafeAreaView>
