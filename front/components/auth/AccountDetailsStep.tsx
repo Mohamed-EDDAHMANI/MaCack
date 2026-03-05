@@ -15,7 +15,7 @@ import {
 } from "react-native";
 import { MaterialIcons } from "@expo/vector-icons";
 import * as ImagePicker from "expo-image-picker";
-import { PRIMARY, SLATE_200, SLATE_400, SLATE_500, SLATE_700 } from "@/constants/colors";
+import { PRIMARY, SLATE_200, SLATE_400, SLATE_500, SLATE_700, SURFACE, BORDER_SUBTLE, PRIMARY_TINT, TEXT_PRIMARY } from "@/constants/colors";
 import type { RegisterFormData, RegisterRole } from "@/types/register";
 import { fetchCountries, type CountryOption } from "@/lib/countries";
 import { fetchCities } from "@/lib/cities";
@@ -37,9 +37,9 @@ const inputStyle = {
   borderRadius: 12,
   borderWidth: 1,
   borderColor: SLATE_200,
-  backgroundColor: "#fff",
+  backgroundColor: SURFACE,
   fontSize: 16,
-  color: "#0f172a",
+  color: TEXT_PRIMARY,
 };
 
 const labelStyle = {
@@ -227,7 +227,7 @@ export function AccountDetailsStep({
                   borderWidth: 2,
                   borderStyle: "dashed",
                   borderColor: PRIMARY + "66",
-                  backgroundColor: PRIMARY + "1A",
+                  backgroundColor: PRIMARY_TINT,
                   alignItems: "center",
                   justifyContent: "center",
                 }}
@@ -247,7 +247,7 @@ export function AccountDetailsStep({
                 alignItems: "center",
                 justifyContent: "center",
                 borderWidth: 2,
-                borderColor: "#fff",
+                borderColor: SURFACE,
               }}
             >
               <MaterialIcons name={photoUri ? "edit" : "camera-alt"} size={16} color="#fff" />
@@ -304,7 +304,7 @@ export function AccountDetailsStep({
                   borderRadius: 12,
                   borderWidth: 1,
                   borderColor: SLATE_200,
-                  backgroundColor: "#fff",
+                  backgroundColor: SURFACE,
                   flexDirection: "row",
                   alignItems: "center",
                   justifyContent: "center",
@@ -344,7 +344,7 @@ export function AccountDetailsStep({
               onPress={() => setCityModalVisible(true)}
               style={[inputStyle, { flexDirection: "row", alignItems: "center", justifyContent: "space-between" }, fieldError("city") ? { borderColor: "#ef4444" } : {}]}
             >
-              <Text style={{ color: formData.city ? "#0f172a" : SLATE_400, fontSize: 16 }}>
+              <Text style={{ color: formData.city ? TEXT_PRIMARY : SLATE_400, fontSize: 16 }}>
                 {formData.city || "Select city"}
               </Text>
               <MaterialIcons name="keyboard-arrow-down" size={24} color={SLATE_400} />
@@ -545,7 +545,7 @@ export function AccountDetailsStep({
                       setCountryModalVisible(false);
                     }}
                     className="py-4 px-4 flex-row items-center gap-3"
-                    style={({ pressed }) => ({ backgroundColor: pressed ? "#f1f5f9" : "#fff" })}
+                    style={({ pressed }) => ({ backgroundColor: pressed ? BORDER_SUBTLE : SURFACE })}
                   >
                     <Text style={{ fontSize: 22 }}>{item.flag}</Text>
                     <Text className="flex-1 text-base text-slate-900">{item.name}</Text>
@@ -611,7 +611,7 @@ export function AccountDetailsStep({
                       setCityModalVisible(false);
                     }}
                     className="py-4 px-4"
-                    style={({ pressed }) => ({ backgroundColor: pressed ? "#f1f5f9" : "#fff" })}
+                    style={({ pressed }) => ({ backgroundColor: pressed ? BORDER_SUBTLE : SURFACE })}
                   >
                     <Text className="text-base text-slate-900">{item}</Text>
                   </Pressable>

@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram name="Cake App UML Class Diagram" id="cake-app-uml">
-        <mxGraphModel dx="802" dy="662" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4000" pageHeight="3000" math="0" shadow="0">
+        <mxGraphModel dx="739" dy="593" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="4000" pageHeight="3000" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -142,7 +142,7 @@
                 <mxCell id="withdrawal-attrs" value="- id: String&#xa;- userId: String&#xa;- amount: Decimal&#xa;- status: Enum [pending|approved|rejected]&#xa;- requestedAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;" parent="withdrawal" vertex="1">
                     <mxGeometry y="30" width="200" height="120" as="geometry"/>
                 </mxCell>
-                <mxCell id="group-rating" value="6️⃣ Notation &amp; Réputation" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                <mxCell id="group-rating" value="6️⃣ Notation &amp;amp; Réputation (Bonuse)" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="40" y="1400" width="800" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="rating" value="" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
@@ -172,7 +172,7 @@
                 <mxCell id="follower-attrs" value="- id: String&#xa;- clientId: String&#xa;- patissiereId: String" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;" parent="follower" vertex="1">
                     <mxGeometry y="30" width="200" height="80" as="geometry"/>
                 </mxCell>
-                <mxCell id="group-comm" value="7️⃣ Communication &amp; Notifications" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                <mxCell id="group-comm" value="7️⃣ Communication &amp;amp; Notifications (Bonuse)" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="900" y="1530" width="800" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="chat" value="&lt;span style=&quot;font-size: 14px; text-wrap-mode: nowrap;&quot;&gt;Chat&lt;/span&gt;" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
@@ -193,7 +193,7 @@
                 <mxCell id="notification-attrs" value="- id: String&#xa;- userId: String&#xa;- title: String&#xa;- message: String&#xa;- type: String&#xa;- isRead: Boolean&#xa;- createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;" parent="notification" vertex="1">
                     <mxGeometry y="30" width="240" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="group-dispute" value="8️⃣ Litiges &amp; Réclamations" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                <mxCell id="group-dispute" value="8️⃣ Litiges &amp;amp; Réclamations (Bonuse)" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="40" y="1700" width="800" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="dispute" value="" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="1" vertex="1">
@@ -205,7 +205,7 @@
                 <mxCell id="dispute-attrs" value="- id: String&#xa;- orderId: String&#xa;- openedBy: String&#xa;- reason: String&#xa;- status: Enum [open|resolved]&#xa;- adminDecision: String&#xa;- createdAt: DateTime" style="text;strokeColor=none;fillColor=none;align=left;verticalAlign=top;spacingLeft=4;spacingRight=4;overflow=hidden;rotatable=0;points=[[0,0.5],[1,0.5]];portConstraint=eastwest;fontSize=12;whiteSpace=wrap;" parent="dispute" vertex="1">
                     <mxGeometry y="30" width="240" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="group-stats" value="9️⃣ Dashboard &amp; Analytics" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
+                <mxCell id="group-stats" value="9️⃣ Dashboard &amp;amp; Analytics (Bonuse)" style="swimlane;fontStyle=0;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=0;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#666666;fontSize=14;align=center;verticalAlign=middle;" parent="1" vertex="1">
                     <mxGeometry x="900" y="2030" width="800" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="statistics" value="" style="swimlane;fontStyle=1;align=center;verticalAlign=top;childLayout=stackLayout;horizontal=1;startSize=30;horizontalStack=0;resizeParent=1;resizeParentMax=0;resizeLast=0;collapsible=1;marginBottom=0;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#6c8ebf;" parent="1" vertex="1">

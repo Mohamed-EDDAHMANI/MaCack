@@ -1,7 +1,7 @@
 import { View, Text, Pressable } from "react-native";
 import { useRouter } from "expo-router";
 import { MaterialIcons } from "@expo/vector-icons";
-import { PRIMARY, BACKGROUND_LIGHT } from "@/constants/colors";
+import { PRIMARY_TINT, BACKGROUND_LIGHT, TEXT_PRIMARY } from "@/constants/colors";
 
 type RegisterHeaderProps = {
   title: string;
@@ -11,8 +11,7 @@ type RegisterHeaderProps = {
 
 export function RegisterHeader({ title, showBack = true, onBack }: RegisterHeaderProps) {
   const router = useRouter();
-  const bgOpacity = BACKGROUND_LIGHT + "cc";
-  const primaryLight = PRIMARY + "1A";
+  const bgOpacity = BACKGROUND_LIGHT + "ee";
   const handleBack = onBack ?? (() => router.back());
 
   return (
@@ -22,14 +21,14 @@ export function RegisterHeader({ title, showBack = true, onBack }: RegisterHeade
       {showBack ? (
         <Pressable
           onPress={handleBack}
-          style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: primaryLight }}
+          style={{ width: 40, height: 40, borderRadius: 20, alignItems: "center", justifyContent: "center", backgroundColor: PRIMARY_TINT }}
         >
-          <MaterialIcons name="arrow-back" size={24} color="#0f172a" />
+          <MaterialIcons name="arrow-back" size={24} color={TEXT_PRIMARY} />
         </Pressable>
       ) : (
         <View style={{ width: 40, height: 40 }} />
       )}
-      <Text style={{ fontSize: 18, fontWeight: "700", color: "#0f172a", flex: 1, textAlign: "center" }}>
+      <Text style={{ fontSize: 18, fontWeight: "700", color: TEXT_PRIMARY, flex: 1, textAlign: "center" }}>
         {title}
       </Text>
       <View style={{ width: 40, height: 40 }} />

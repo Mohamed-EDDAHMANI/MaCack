@@ -1,7 +1,7 @@
 import { View, Text, Pressable, StyleSheet } from "react-native";
 import { Image } from "expo-image";
 import { MaterialIcons } from "@expo/vector-icons";
-import { PRIMARY, SLATE_200, SLATE_400, SLATE_600 } from "@/constants/colors";
+import { PRIMARY, SLATE_200, SLATE_400, SLATE_600, SURFACE, BORDER, BORDER_SUBTLE, PRIMARY_TINT, TEXT_PRIMARY } from "@/constants/colors";
 import type { RegisterRole } from "@/types/register";
 
 interface RoleCardProps {
@@ -58,8 +58,8 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   cardDefault: {
-    backgroundColor: "#fff",
-    borderColor: SLATE_200,
+    backgroundColor: SURFACE,
+    borderColor: BORDER,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 0 },
     shadowOpacity: 0.05,
@@ -67,7 +67,7 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   cardSelected: {
-    backgroundColor: "rgba(255,255,255,0.5)",
+    backgroundColor: PRIMARY_TINT,
     borderColor: PRIMARY,
     borderWidth: 2,
     shadowColor: PRIMARY,
@@ -91,7 +91,7 @@ const styles = StyleSheet.create({
   title: {
     fontSize: 18,
     fontWeight: "700",
-    color: "#0f172a",
+    color: TEXT_PRIMARY,
     letterSpacing: -0.015,
   },
   description: {
@@ -121,7 +121,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     overflow: "hidden",
     flexShrink: 0,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: BORDER_SUBTLE,
     position: "relative",
   },
   image: {

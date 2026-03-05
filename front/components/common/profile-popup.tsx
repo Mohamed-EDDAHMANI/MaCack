@@ -11,7 +11,7 @@ import {
 import { Image } from "expo-image";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { PRIMARY, SLATE_400 } from "@/constants/colors";
+import { PRIMARY, SLATE_400, SURFACE, BORDER_SUBTLE, PRIMARY_TINT } from "@/constants/colors";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { logout } from "@/store/features/auth";
 import { API_BASE_URL } from "@/lib/axios";
@@ -85,7 +85,11 @@ export function ProfilePopup({ visible, onClose, profileRoute }: ProfilePopupPro
           </Pressable>
           <Pressable
             style={[styles.actionRow, styles.logoutRow]}
-            onPress={() => { close(); dispatch(logout()); }}
+            onPress={() => {
+              close();
+              dispatch(logout()); // reset user data (tokens, user)
+              router.replace("/");
+            }}
           >
             <MaterialIcons name="logout" size={20} color="#ef4444" />
             <Text style={[styles.actionText, { color: "#ef4444" }]}>Log Out</Text>
@@ -107,7 +111,7 @@ const styles = StyleSheet.create({
   },
   card: {
     width: 260,
-    backgroundColor: "#fff",
+    backgroundColor: SURFACE,
     borderRadius: 20,
     paddingTop: 28,
     paddingBottom: 8,
@@ -146,7 +150,7 @@ const styles = StyleSheet.create({
     width: 64,
     height: 64,
     borderRadius: 32,
-    backgroundColor: PRIMARY + "1A",
+    backgroundColor: PRIMARY_TINT,
     alignItems: "center",
     justifyContent: "center",
   },
@@ -162,7 +166,7 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   roleBadge: {
-    backgroundColor: PRIMARY + "14",
+    backgroundColor: PRIMARY_TINT,
     paddingHorizontal: 12,
     paddingVertical: 3,
     borderRadius: 10,
@@ -177,7 +181,7 @@ const styles = StyleSheet.create({
   divider: {
     width: "100%",
     height: 1,
-    backgroundColor: "#f1f5f9",
+    backgroundColor: BORDER_SUBTLE,
     marginBottom: 6,
   },
   actionRow: {

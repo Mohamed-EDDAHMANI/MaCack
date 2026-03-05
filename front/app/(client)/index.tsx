@@ -14,7 +14,17 @@ import { LinearGradient } from "expo-linear-gradient";
 import { BlurView } from "expo-blur";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { PRIMARY, BACKGROUND_LIGHT, SLATE_400, SLATE_500 } from "@/constants/colors";
+import {
+  PRIMARY,
+  BACKGROUND_LIGHT,
+  SLATE_400,
+  SLATE_500,
+  SURFACE,
+  BORDER,
+  BORDER_SUBTLE,
+  PRIMARY_TINT,
+  TEXT_PRIMARY,
+} from "@/constants/colors";
 import { useAppSelector } from "@/store/hooks";
 import { ProfilePopup } from "@/components/common/profile-popup";
 import { buildPhotoUrl } from "@/lib/utils";
@@ -113,11 +123,11 @@ export default function ClientExploreScreen() {
           <ProfilePopup
             visible={showProfilePopup}
             onClose={() => setShowProfilePopup(false)}
-            profileRoute="/(client)/profile"
+            profileRoute="/(main)/profile"
           />
 
           <View style={styles.searchWrap}>
-            <MaterialIcons name="search" size={22} color={PRIMARY + "99"} style={styles.searchIcon} />
+            <MaterialIcons name="search" size={22} color={PRIMARY} style={styles.searchIcon} />
             <TextInput
               style={styles.searchInput}
               placeholder="Search cakes or pastry chefs"
@@ -206,8 +216,8 @@ export default function ClientExploreScreen() {
 
 const styles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: BACKGROUND_LIGHT },
-  headerContainer: { overflow: "hidden", borderBottomWidth: 1, borderBottomColor: PRIMARY + "1A" },
-  headerColorOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(248, 246, 247, 0.6)" },
+  headerContainer: { overflow: "hidden", borderBottomWidth: 1, borderBottomColor: BORDER },
+  headerColorOverlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(255, 255, 255, 0.75)" },
   header: {
     flexDirection: "row",
     alignItems: "center",
@@ -218,7 +228,7 @@ const styles = StyleSheet.create({
   },
   iconBtn: { width: 40, height: 40, alignItems: "center", justifyContent: "center" },
   avatarBtn: {
-    backgroundColor: PRIMARY + "1A",
+    backgroundColor: PRIMARY_TINT,
     borderRadius: 22,
     borderWidth: 1.5,
     borderColor: PRIMARY,
@@ -234,40 +244,42 @@ const styles = StyleSheet.create({
     width: "100%",
     paddingLeft: 48,
     paddingRight: 16,
-    backgroundColor: "#fff",
+    backgroundColor: SURFACE,
     borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER,
     fontSize: 16,
-    color: "#0f172a",
+    color: TEXT_PRIMARY,
   },
   chipsScrollView: { flexGrow: 0 },
   chipsScroll: { paddingHorizontal: 16, paddingBottom: 16, gap: CHIP_GAP, flexDirection: "row" },
   chip: { paddingHorizontal: 20, paddingVertical: 8, borderRadius: 9999 },
   chipActive: { backgroundColor: PRIMARY },
-  chipInactive: { backgroundColor: PRIMARY + "1A" },
+  chipInactive: { backgroundColor: PRIMARY_TINT },
   chipText: { fontSize: 14 },
-  chipTextActive: { color: "#fff", fontWeight: "600" },
+  chipTextActive: { color: SURFACE, fontWeight: "600" },
   chipTextInactive: { color: PRIMARY, fontWeight: "500" },
   main: { flex: 1 },
   mainContent: { paddingBottom: 24 },
   section: { paddingVertical: 16, paddingHorizontal: 16 },
-  sectionTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a", marginBottom: 12 },
+  sectionTitle: { fontSize: 18, fontWeight: "700", color: TEXT_PRIMARY, marginBottom: 12 },
   featuredScroll: { flexDirection: "row", gap: 16 },
   featuredCard: { width: FEATURED_CARD_WIDTH, height: FEATURED_CARD_HEIGHT, borderRadius: 12, overflow: "hidden" },
   featuredOverlay: { ...StyleSheet.absoluteFillObject, justifyContent: "flex-end", padding: 16 },
-  featuredTitle: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  featuredChef: { fontSize: 12, color: "rgba(255,255,255,0.8)", marginTop: 2 },
+  featuredTitle: { fontSize: 16, fontWeight: "700", color: SURFACE },
+  featuredChef: { fontSize: 12, color: "rgba(255,255,255,0.9)", marginTop: 2 },
   trendingCard: {
-    backgroundColor: "#fff",
+    backgroundColor: SURFACE,
     borderRadius: 12,
     overflow: "hidden",
     marginBottom: 24,
     borderWidth: 1,
-    borderColor: PRIMARY + "0D",
+    borderColor: BORDER,
     shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 4,
+    elevation: 3,
   },
   trendingImageWrap: { height: CARD_IMAGE_HEIGHT, position: "relative" },
   trendingImage: { width: "100%", height: "100%" },
@@ -278,13 +290,13 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.8)",
+    backgroundColor: "rgba(255,255,255,0.9)",
     alignItems: "center",
     justifyContent: "center",
   },
   trendingBody: { padding: 16 },
   trendingRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "flex-start", marginBottom: 8 },
-  trendingTitle: { fontSize: 18, fontWeight: "700", color: "#0f172a" },
+  trendingTitle: { fontSize: 18, fontWeight: "700", color: TEXT_PRIMARY },
   locationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
   locationText: { fontSize: 14, color: SLATE_500 },
   price: { fontSize: 20, fontWeight: "700", color: PRIMARY },
@@ -294,11 +306,11 @@ const styles = StyleSheet.create({
     alignItems: "center",
     paddingTop: 12,
     borderTopWidth: 1,
-    borderTopColor: "#f1f5f9",
+    borderTopColor: BORDER_SUBTLE,
   },
   chefRow: { flexDirection: "row", alignItems: "center", gap: 8 },
-  chefAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#e2e8f0" },
-  chefName: { fontSize: 14, fontWeight: "500", color: "#0f172a" },
+  chefAvatar: { width: 32, height: 32, borderRadius: 16, backgroundColor: BORDER },
+  chefName: { fontSize: 14, fontWeight: "500", color: TEXT_PRIMARY },
   ratingRow: { flexDirection: "row", alignItems: "center", gap: 4 },
-  ratingText: { fontSize: 14, fontWeight: "700", color: "#0f172a" },
+  ratingText: { fontSize: 14, fontWeight: "700", color: TEXT_PRIMARY },
 });

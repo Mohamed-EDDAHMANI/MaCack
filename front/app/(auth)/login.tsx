@@ -7,11 +7,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
+  ActivityIndicator,
 } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
+import { login as loginUser, setCredentialsFromResponse, logout } from "@/store/features/auth";
+import { useAppDispatch } from "@/store/hooks";
 
 const PRIMARY = "#da1b61";
 const BACKGROUND_LIGHT = "#f8f6f7";
@@ -24,12 +27,46 @@ const SLATE_500 = "#64748b";
 
 export default function LoginScreen() {
   const router = useRouter();
+  const dispatch = useAppDispatch();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSignIn = () => {
-    // TODO: connect to auth API
+  const handleSignIn = async () => {
+    const trimmedEmail = email.trim().toLowerCase();
+    if (!trimmedEmail || !password) {
+      setErrorMessage("Please enter your email and password.");
+      return;
+    }
+    if (password.length < 8) {
+      setErrorMessage("Password must be at least 8 characters.");
+      return;
+    }
+
+    setSubmitting(true);
+    setErrorMessage(null);
+    dispatch(logout()); // reset any previous user data before login
+
+    try {
+      const response = await loginUser({ email: trimmedEmail, password });
+
+      if (response.success && response.data) {
+        dispatch(setCredentialsFromResponse(response));
+        router.replace("/");
+        return;
+      }
+
+      setErrorMessage(response.message || "Login failed. Please try again.");
+    } catch (err: any) {
+      const data = err?.response?.data;
+      const msg =
+        data?.message || err?.message || "Something went wrong. Please try again.";
+      setErrorMessage(msg);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -67,7 +104,13 @@ export default function LoginScreen() {
             {/* Top Bar */}
             <View className="flex-row items-center justify-between py-4 absolute top-0 left-0 right-0 px-6 z-10">
               <Pressable
-                onPress={() => router.back()}
+                onPress={() => {
+                  if (router.canGoBack()) {
+                    router.back();
+                  } else {
+                    router.replace("/(main)");
+                  }
+                }}
                 className="w-10 h-10 rounded-full items-center justify-center"
                 style={{ backgroundColor: "rgba(218, 27, 97, 0.1)" }}
               >
@@ -152,11 +195,23 @@ export default function LoginScreen() {
                   </View>
                 </View>
 
+                {errorMessage ? (
+                  <View
+                    className="mt-2 px-3 py-2 rounded-lg"
+                    style={{ backgroundColor: "rgba(220, 38, 38, 0.1)" }}
+                  >
+                    <Text className="text-sm" style={{ color: "#b91c1c" }}>
+                      {errorMessage}
+                    </Text>
+                  </View>
+                ) : null}
+
                 <Pressable
                   onPress={handleSignIn}
+                  disabled={submitting}
                   className="w-full h-14 rounded-xl items-center justify-center mt-4 active:opacity-90"
                   style={{
-                    backgroundColor: PRIMARY,
+                    backgroundColor: submitting ? SLATE_400 : PRIMARY,
                     shadowColor: PRIMARY,
                     shadowOffset: { width: 0, height: 4 },
                     shadowOpacity: 0.25,
@@ -164,7 +219,11 @@ export default function LoginScreen() {
                     elevation: 4,
                   }}
                 >
-                  <Text className="text-white font-bold text-base">Sign In</Text>
+                  {submitting ? (
+                    <ActivityIndicator size="small" color="#fff" />
+                  ) : (
+                    <Text className="text-white font-bold text-base">Sign In</Text>
+                  )}
                 </Pressable>
               </View>
 

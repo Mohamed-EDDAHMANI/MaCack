@@ -2,25 +2,11 @@ import { Redirect } from "expo-router";
 import { useAppSelector } from "@/store/hooks";
 
 /**
- * Root index — redirects to the correct role-based tab group
- * or to the client explore (public) if not authenticated.
+ * Root index — always redirect to the client tab group.
+ * (No dashboard / role-based tabs.)
  */
 export default function RootIndex() {
-  const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
-  const role = useAppSelector((state) => state.auth.user?.role);
-
-  if (!isAuthenticated) {
-    // Unauthenticated users land on the client explore screen (public browsing)
-    return <Redirect href="/(client)" />;
-  }
-
-  switch (role) {
-    case "PATISSIERE":
-      return <Redirect href="/(patissiere)" />;
-    case "LIVREUR":
-      return <Redirect href="/(livreur)" />;
-    case "CLIENT":
-    default:
-      return <Redirect href="/(client)" />;
-  }
+  // Keep selector so this screen reacts to login/logout.
+  useAppSelector((state) => state.auth.isAuthenticated);
+  return <Redirect href={"/(main)" as any} />;
 }

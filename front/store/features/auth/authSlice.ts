@@ -20,6 +20,10 @@ export interface AuthUser {
   createdAt?: string;
   photo?: string | null;
   coverPhoto?: string | null;
+  phone?: string | null;
+  city?: string | null;
+  address?: string | null;
+  description?: string | null;
 }
 
 // Auth-service success response data (login/register)
@@ -85,6 +89,11 @@ const authSlice = createSlice({
         state.refreshToken = data.refreshToken ?? null;
       }
     },
+    updateUser: (state, action: PayloadAction<Partial<AuthUser>>) => {
+      if (state.user) {
+        state.user = { ...state.user, ...action.payload };
+      }
+    },
     logout: (state) => {
       state.isAuthenticated = false;
       state.user = null;
@@ -94,6 +103,6 @@ const authSlice = createSlice({
   },
 });
 
-export const { setCredentials, setCredentialsFromResponse, logout } =
+export const { setCredentials, setCredentialsFromResponse, updateUser, logout } =
   authSlice.actions;
 export default authSlice.reducer;

@@ -60,6 +60,7 @@ Class: Product
 - price
 - images[]
 - personalizationOptions
+- ingredients[] 
 - patissiereId
 - rating
 - isActive

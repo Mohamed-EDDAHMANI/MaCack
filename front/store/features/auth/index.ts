@@ -2,6 +2,7 @@ export { default as authReducer } from "./authSlice";
 export {
   setCredentials,
   setCredentialsFromResponse,
+  updateUser,
   logout,
 } from "./authSlice";
 export type {
@@ -13,5 +14,5 @@ export type {
   AuthState,
 } from "./authSlice";
 
-export { login, register } from "./authApi";
-export type { LoginPayload, RegisterPayload } from "./authApi";
+export { login, register, updateProfile } from "./authApi";
+export type { LoginPayload, RegisterPayload, UpdateProfilePayload } from "./authApi";

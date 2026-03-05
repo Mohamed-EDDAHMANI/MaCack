@@ -4,6 +4,7 @@ import { api } from "@/lib/axios";
 import type {
   AuthApiResponse,
   AuthResponseData,
+  AuthUser,
   UserRole,
 } from "./authSlice";
 
@@ -100,6 +101,52 @@ export async function register(
 
   const res = await api.post<AuthApiResponse<AuthResponseData>>(
     REGISTER_PATH,
+    body,
+  );
+  return res.data;
+}
+
+/* ─── Update profile ─── */
+
+const UPDATE_PROFILE_PATH = "/s1/auth/update-profile";
+
+export interface UpdateProfilePayload {
+  name?: string;
+  email?: string;
+  password?: string;
+  phone?: string | null;
+  city?: string | null;
+  address?: string | null;
+  description?: string | null;
+  photo?: string | null;
+}
+
+/**
+ * Update the authenticated user's profile.
+ * If a local photo URI is provided, it's converted to base64.
+ */
+export async function updateProfile(
+  payload: UpdateProfilePayload,
+): Promise<AuthApiResponse<{ user: AuthUser }>> {
+  let photoBase64: string | null | undefined = payload.photo;
+  let photoMimetype: string | undefined;
+  let photoFilename: string | undefined;
+
+  if (payload.photo && !payload.photo.startsWith("http")) {
+    photoBase64 = await fileUriToBase64(payload.photo);
+    photoMimetype = guessMimeType(payload.photo);
+    photoFilename = payload.photo.split("/").pop() || undefined;
+  }
+
+  const body = {
+    ...payload,
+    photo: photoBase64,
+    photoMimetype,
+    photoFilename,
+  };
+
+  const res = await api.post<AuthApiResponse<{ user: AuthUser }>>(
+    UPDATE_PROFILE_PATH,
     body,
   );
   return res.data;
