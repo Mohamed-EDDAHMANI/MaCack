@@ -7,12 +7,14 @@ import { PersistGate } from "redux-persist/integration/react";
 import "react-native-reanimated";
 
 import { store, persistor } from "@/store";
+import { AuthModalProvider } from "@/contexts/AuthModalContext";
 
 export default function RootLayout() {
   return (
     <Provider store={store}>
       <PersistGate loading={null} persistor={persistor}>
         <ThemeProvider value={DefaultTheme}>
+          <AuthModalProvider>
           <Stack screenOptions={{ headerShown: false }}>
             <Stack.Screen name="index" />
             <Stack.Screen name="(auth)" />
@@ -23,6 +25,7 @@ export default function RootLayout() {
             <Stack.Screen name="test-products" />
           </Stack>
           <StatusBar style="dark" />
+          </AuthModalProvider>
         </ThemeProvider>
       </PersistGate>
     </Provider>

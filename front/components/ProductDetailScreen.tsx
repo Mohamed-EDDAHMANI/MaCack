@@ -1,15 +1,19 @@
-import { useEffect } from "react";
+import { useEffect, useRef, useMemo, useState, useCallback } from "react";
 import {
   View,
   Text,
-  ScrollView,
   Pressable,
   StyleSheet,
   ActivityIndicator,
   Platform,
+  Animated,
+  NativeSyntheticEvent,
+  NativeScrollEvent,
+  ScrollView,
+  Dimensions,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
-import { Image } from "react-native";
+import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useLocalSearchParams, useRouter } from "expo-router";
@@ -25,11 +29,13 @@ import {
   PRIMARY_TINT,
 } from "@/constants/colors";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { fetchProductById, toggleLike, clearSelectedProduct } from "@/store/features/catalog";
 import { buildPhotoUrl } from "@/lib/utils";
 
 const HERO_HEIGHT = 400;
 const STAR_YELLOW = "#eab308";
+const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
 function safeImageUrl(raw?: string | null): string | null {
   if (!raw) return null;
@@ -47,6 +53,7 @@ export default function ProductDetailScreen() {
   const id = typeof params.id === "string" ? params.id : params.id?.[0] ?? undefined;
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { showAuthModal } = useAuthModal();
   const user = useAppSelector((state) => state.auth.user);
   const productFromList = useAppSelector((state) =>
     state.catalog.products.find((p) => String(p.id) === String(id))
@@ -120,61 +127,175 @@ export default function ProductDetailScreen() {
     );
   }
 
-  const imageUri = product.images?.length ? safeImageUrl(product.images[0]) : null;
+  const imageUris = useMemo(() => {
+    const arr = product.images ?? [];
+    return arr.map((raw) => safeImageUrl(raw)).filter((u): u is string => u != null);
+  }, [product.images]);
+  const hasImages = imageUris.length > 0;
+  const imageCount = hasImages ? imageUris.length : 1;
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const heroScrollRef = useRef<ScrollView>(null);
+
+  const onHeroScroll = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const x = e.nativeEvent.contentOffset.x;
+    const index = Math.round(x / SCREEN_WIDTH);
+    setCurrentImageIndex(Math.min(Math.max(0, index), imageCount - 1));
+  }, [imageCount]);
+
+  const activeDotIndex = useRef(new Animated.Value(0)).current;
+  useEffect(() => {
+    Animated.spring(activeDotIndex, {
+      toValue: currentImageIndex,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 0,
+    }).start();
+  }, [currentImageIndex, activeDotIndex]);
+
   const pat = product.patissiere;
   const rating = pat?.rating ?? 0;
   const ratingCount = pat?.ratingCount ?? 0;
   const likesCount = product.likesCount ?? 0;
   const categoryName = product.category?.name?.toUpperCase() ?? "";
 
+  // Top icons: always in layout; gradually fade out as user scrolls
+  const scrollY = useRef(new Animated.Value(0)).current;
+  const FADE_SCROLL_RANGE = 100; // over this many px scroll, icons go from 1 to 0 opacity
+  const [iconsTappable, setIconsTappable] = useState(true);
 
-  console.log("selectedProduct", selectedProduct);
-  console.log("productFromList", productFromList);
-  console.log("final product", product);
+  const topIconsOpacity = useMemo(
+    () =>
+      scrollY.interpolate({
+        inputRange: [0, FADE_SCROLL_RANGE],
+        outputRange: [1, 0],
+        extrapolate: "clamp",
+      }),
+    [scrollY]
+  );
+
+  const onScrollNative = useCallback((e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    const y = e.nativeEvent.contentOffset.y;
+    setIconsTappable(y <= FADE_SCROLL_RANGE * 0.8);
+  }, []);
+
+  const handleScroll = Animated.event(
+    [{ nativeEvent: { contentOffset: { y: scrollY } } }],
+    { useNativeDriver: true, listener: onScrollNative }
+  );
 
   return (
     <View style={styles.safe} key={id}>
-      <ScrollView
+      {/* Top icons – fixed; fade out gradually on scroll */}
+      <Animated.View
+        style={[
+          styles.heroActionsOverlay,
+          { paddingTop: insets.top + 6, paddingHorizontal: 10 },
+          { opacity: topIconsOpacity },
+        ]}
+        pointerEvents={iconsTappable ? "auto" : "none"}
+      >
+        <View style={styles.heroActionsRow}>
+          <Pressable style={styles.heroBtnSmall} onPress={() => router.back()}>
+            <MaterialIcons name="arrow-back" size={22} color="#fff" />
+          </Pressable>
+          <View style={styles.heroRight}>
+            <Pressable style={styles.heroBtnSmall}>
+              <MaterialIcons name="share" size={20} color="#fff" />
+            </Pressable>
+            <Pressable
+              style={styles.heroBtnSmall}
+              onPress={() => {
+                if (!user) {
+                  showAuthModal();
+                  return;
+                }
+                dispatch(toggleLike(product.id));
+              }}
+            >
+              <MaterialIcons name="favorite" size={20} color={isLiked ? PRIMARY : "#fff"} />
+            </Pressable>
+          </View>
+        </View>
+      </Animated.View>
+
+      <Animated.ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
+        onScroll={handleScroll}
+        scrollEventThrottle={16}
+        nestedScrollEnabled
       >
-        {/* Hero image with overlay */}
-        <View style={styles.heroWrap}>
-          {imageUri ? (
-            <Image source={{ uri: imageUri }} style={styles.heroImage} contentFit="cover" />
-          ) : (
-            <View style={[styles.heroImage, styles.heroPlaceholder]}>
-              <MaterialIcons name="cake" size={80} color={SLATE_400} />
-            </View>
-          )}
+        {/* Hero: horizontal image carousel (inside vertical scroll so horizontal swipe works) */}
+        <View style={styles.heroBlock}>
+          <ScrollView
+            ref={heroScrollRef}
+            horizontal
+            pagingEnabled
+            showsHorizontalScrollIndicator={false}
+            onMomentumScrollEnd={onHeroScroll}
+            onScroll={onHeroScroll}
+            scrollEventThrottle={16}
+            decelerationRate="fast"
+            style={styles.heroScroll}
+            contentContainerStyle={styles.heroScrollContent}
+          >
+            {hasImages ? (
+              imageUris.map((uri, i) => (
+                <View key={i} style={[styles.heroSlide, { width: SCREEN_WIDTH }]}>
+                  <Image source={{ uri }} style={styles.heroImage} contentFit="cover" />
+                </View>
+              ))
+            ) : (
+              <View style={[styles.heroSlide, { width: SCREEN_WIDTH }]}>
+                <View style={[styles.heroImage, styles.heroPlaceholder]}>
+                  <MaterialIcons name="cake" size={80} color={SLATE_400} />
+                </View>
+              </View>
+            )}
+          </ScrollView>
           <LinearGradient
             colors={["rgba(0,0,0,0.4)", "transparent", "rgba(0,0,0,0.2)"]}
             style={StyleSheet.absoluteFill}
+            pointerEvents="none"
           />
-          <View style={styles.heroActions}>
-            <Pressable style={styles.heroBtn} onPress={() => router.back()}>
-              <MaterialIcons name="arrow-back" size={24} color="#fff" />
-            </Pressable>
-            <View style={styles.heroRight}>
-              <Pressable style={styles.heroBtn}>
-                <MaterialIcons name="share" size={22} color="#fff" />
-              </Pressable>
-              <Pressable
-                style={styles.heroBtn}
-                onPress={() => user?.id && dispatch(toggleLike(product.id))}
-              >
-                <MaterialIcons
-                  name="favorite"
-                  size={22}
-                  color={isLiked ? PRIMARY : "#fff"}
-                />
-              </Pressable>
+          {/* Numbers on the left; dots centered on X, slightly offset on Y */}
+          <View style={styles.paginationWrap} pointerEvents="none">
+            <Text style={styles.paginationCount}>
+              {currentImageIndex + 1} / {imageCount}
+            </Text>
+            <View style={styles.paginationDotsCenter}>
+              <View style={styles.paginationDots}>
+              {Array.from({ length: imageCount }).map((_, i) => {
+                const scale = activeDotIndex.interpolate({
+                  inputRange: [i - 0.5, i, i + 0.5],
+                  outputRange: [1, 1.25, 1],
+                  extrapolate: "clamp",
+                });
+                const opacity = activeDotIndex.interpolate({
+                  inputRange: [i - 0.5, i, i + 0.5],
+                  outputRange: [0.5, 1, 0.5],
+                  extrapolate: "clamp",
+                });
+                return (
+                  <Animated.View
+                    key={i}
+                    style={[
+                      styles.paginationDot,
+                      {
+                        opacity,
+                        transform: [{ scale }],
+                        backgroundColor: currentImageIndex === i ? PRIMARY : "rgba(255,255,255,0.6)",
+                      },
+                    ]}
+                  />
+              );
+            })}
+              </View>
             </View>
           </View>
         </View>
-
-        {/* Content card (rounded top) */}
+        {/* Content card */}
         <View style={styles.contentCard}>
           {/* Tags */}
           {categoryName ? (
@@ -219,7 +340,16 @@ export default function ProductDetailScreen() {
           {/* Chef card */}
           {pat && (
             <View style={styles.chefCard}>
-              <View style={styles.chefCardRow}>
+              <Pressable
+                style={styles.chefCardRow}
+                onPress={() => {
+                  if (!user) {
+                    showAuthModal();
+                    return;
+                  }
+                  if (pat?.id) router.push({ pathname: "/(main)/profile/[id]", params: { id: String(pat.id) } } as any);
+                }}
+              >
                 <View style={styles.chefMain}>
                   <View style={styles.chefAvatarWrap}>
                     {pat.photo ? (
@@ -244,10 +374,10 @@ export default function ProductDetailScreen() {
                     ) : null}
                   </View>
                 </View>
-                <Pressable style={styles.chatBtn}>
+                <Pressable style={styles.chatBtn} onPress={(e) => e.stopPropagation()}>
                   <MaterialIcons name="chat-bubble-outline" size={20} color={PRIMARY} />
                 </Pressable>
-              </View>
+              </Pressable>
               <View style={styles.chefCardFooter}>
                 <View style={styles.creatorRatingRow}>
                   <MaterialIcons name="star" size={14} color={STAR_YELLOW} />
@@ -255,7 +385,16 @@ export default function ProductDetailScreen() {
                     {(rating || 0).toFixed(1)} Creator Rating
                   </Text>
                 </View>
-                <Pressable onPress={() => router.push("/(main)/profile" as any)}>
+                <Pressable
+                  onPress={(e) => {
+                    e.stopPropagation();
+                    if (!user) {
+                      showAuthModal();
+                      return;
+                    }
+                    if (pat?.id) router.push({ pathname: "/(main)/profile/[id]", params: { id: String(pat.id) } } as any);
+                  }}
+                >
                   <Text style={styles.viewPortfolio}>View Portfolio</Text>
                 </Pressable>
               </View>
@@ -282,7 +421,7 @@ export default function ProductDetailScreen() {
           </View>
         </View>
         <View style={{ height: 120 }} />
-      </ScrollView>
+      </Animated.ScrollView>
 
       {/* Fixed bottom bar */}
       <View style={[styles.bottomBar, { paddingBottom: Math.max(16, insets.bottom) }]}>
@@ -310,10 +449,21 @@ const styles = StyleSheet.create({
   backBtnText: { fontSize: 16, fontWeight: "600", color: PRIMARY },
   scroll: { flex: 1 },
   scrollContent: { paddingBottom: 24 },
-  heroWrap: {
+  heroBlock: {
     width: "100%",
     height: HERO_HEIGHT,
     position: "relative",
+    overflow: "hidden",
+  },
+  heroScroll: {
+    width: SCREEN_WIDTH,
+    height: HERO_HEIGHT,
+  },
+  heroScrollContent: {
+    flexDirection: "row",
+  },
+  heroSlide: {
+    height: HERO_HEIGHT,
     overflow: "hidden",
   },
   heroImage: { width: "100%", height: "100%" },
@@ -322,26 +472,56 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  heroActions: {
+  heroActionsOverlay: {
     position: "absolute",
-    top: Platform.OS === "ios" ? 48 : 24,
-    left: 16,
-    right: 16,
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 10,
+  },
+  heroActionsRow: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
   },
-  heroBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: "rgba(255,255,255,0.2)",
+  heroBtnSmall: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: "transparent",
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.3)",
   },
-  heroRight: { flexDirection: "row", gap: 8 },
+  heroRight: { flexDirection: "row", gap: 6 },
+  paginationWrap: {
+    position: "absolute",
+    bottom: 40,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 20,
+  },
+  paginationDotsCenter: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  paginationDots: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+  },
+  paginationDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+  },
+  paginationCount: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: "rgba(255,255,255,0.95)",
+  },
   contentCard: {
     marginTop: -32,
     paddingHorizontal: 24,

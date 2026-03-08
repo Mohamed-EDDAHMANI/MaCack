@@ -25,6 +25,7 @@ import {
   FLOATING_TAB_BAR_BOTTOM_SAFE,
 } from "@/constants/colors";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { fetchProducts, fetchCategories, toggleLike } from "@/store/features/catalog";
 import type { Product } from "@/store/features/catalog";
 import { CategoryBadge } from "@/components/common/category-badge";
@@ -44,6 +45,7 @@ const CARD_ASPECT = 16 / 10;
 export default function ClientFavoritesScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { showAuthModal } = useAuthModal();
   const user = useAppSelector((state) => state.auth.user);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { products, productsLoading, productsError, categories } = useAppSelector(
@@ -278,7 +280,21 @@ export default function ClientFavoritesScreen() {
                     </Text>
                   </View>
                   <View style={styles.cardFooter}>
-                    <View style={styles.chefBlock}>
+                    <Pressable
+                      style={styles.chefBlock}
+                      onPress={() => {
+                        if (!user) {
+                          showAuthModal();
+                          return;
+                        }
+                        if (pat?.id) {
+                          router.push({
+                            pathname: "/(main)/profile/[id]",
+                            params: { id: String(pat.id) },
+                          } as any);
+                        }
+                      }}
+                    >
                       {pat?.photo ? (
                         <Image
                           source={{ uri: safeImageUrl(pat.photo) ?? "" }}
@@ -305,7 +321,7 @@ export default function ClientFavoritesScreen() {
                           </Text>
                         </View>
                       </View>
-                    </View>
+                    </Pressable>
                     <Pressable
                       style={styles.orderBtn}
                       onPress={() =>

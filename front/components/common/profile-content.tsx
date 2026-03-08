@@ -61,6 +61,8 @@ interface ProfileContentProps {
     coverPhoto?: string | null;
     description?: string | null;
   } | null;
+  /** Stats for viewed user (rating + followers). Use when profile was loaded via getProfileById. */
+  viewedUserStats?: { rating: { average: number; count: number }; followersCount: number } | null;
   /** Force showing/hiding the back button. Default: show only for other users. */
   showBack?: boolean;
 }
@@ -70,7 +72,7 @@ const GRID_GAP = 2;
 const GRID_PADDING = 8;
 const CELL_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 
-export function ProfileContent({ menuItems = [], viewedUser, showBack }: ProfileContentProps) {
+export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, showBack }: ProfileContentProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
   const authUser = useAppSelector((state) => state.auth.user);
@@ -213,10 +215,16 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
                   <Text style={styles.statBold}>
                     {isOwnProfile && profileStats != null
                       ? Number(profileStats.rating.average).toFixed(1)
-                      : "0"}
+                      : viewedUserStats
+                        ? Number(viewedUserStats.rating.average).toFixed(1)
+                        : "0"}
                   </Text>
                   <Text style={styles.statMuted}>
-                    ({isOwnProfile && profileStats != null ? profileStats.rating.count : 0} reviews)
+                    ({isOwnProfile && profileStats != null
+                      ? profileStats.rating.count
+                      : viewedUserStats
+                        ? viewedUserStats.rating.count
+                        : 0} reviews)
                   </Text>
                 </View>
                 <View style={styles.statDot} />
@@ -226,7 +234,11 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
                       ? profileStats.followersCount >= 1000
                         ? `${(profileStats.followersCount / 1000).toFixed(1)}k`
                         : String(profileStats.followersCount)
-                      : "0"}
+                      : viewedUserStats
+                        ? viewedUserStats.followersCount >= 1000
+                          ? `${(viewedUserStats.followersCount / 1000).toFixed(1)}k`
+                          : String(viewedUserStats.followersCount)
+                        : "0"}
                   </Text>
                   <Text style={styles.statMuted}>Followers</Text>
                 </View>
@@ -234,7 +246,18 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
             )}
           </View>
 
-          {/* Action buttons (only when viewing other user) */}
+          {/* Bio right after rating */}
+          <View style={styles.bioSection}>
+            {profileUser?.description ? (
+              <Text style={styles.bio}>{profileUser.description}</Text>
+            ) : isOwnProfile ? (
+              <Text style={styles.bioPlaceholder}>Add a bio in Edit profile</Text>
+            ) : (
+              <Text style={styles.bioPlaceholder}>No bio yet</Text>
+            )}
+          </View>
+
+          {/* Follow / Message buttons after bio */}
           {!isOwnProfile ? (
             <View style={styles.actionRow}>
               <Pressable style={styles.followBtn}>
@@ -246,13 +269,6 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
                 <Text style={styles.messageBtnText}>Message</Text>
               </Pressable>
             </View>
-          ) : null}
-
-          {/* Bio (from user description in DB) */}
-          {profileUser?.description ? (
-            <Text style={styles.bio}>{profileUser.description}</Text>
-          ) : isOwnProfile ? (
-            <Text style={styles.bioPlaceholder}>Add a bio in Edit profile</Text>
           ) : null}
         </View>
 
@@ -269,7 +285,19 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
           ))}
         </View>
 
-        {/* Portfolio grid: products whose patissiereId = authenticated user (from Redux) */}
+        {/* Tab content: Portfolio = grid, About = bio, others placeholder */}
+        {activeTab === "About" ? (
+          <View style={styles.aboutTabContent}>
+            <Text style={styles.aboutLabel}>Bio</Text>
+            {profileUser?.description ? (
+              <Text style={styles.aboutBio}>{profileUser.description}</Text>
+            ) : (
+              <Text style={styles.aboutBioEmpty}>
+                {isOwnProfile ? "Add a bio in Edit profile." : "No bio yet."}
+              </Text>
+            )}
+          </View>
+        ) : activeTab === "Portfolio" ? (
         <View style={styles.gridWrap}>
           {portfolioProducts.length === 0 ? (
             <Text style={styles.portfolioEmpty}>
@@ -319,6 +347,11 @@ export function ProfileContent({ menuItems = [], viewedUser, showBack }: Profile
             })
           )}
         </View>
+        ) : (
+          <View style={styles.aboutTabContent}>
+            <Text style={styles.portfolioEmpty}>Coming soon</Text>
+          </View>
+        )}
 
         {/* Log out (optional quick action for own profile) */}
         {isOwnProfile ? (
@@ -523,21 +556,45 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   messageBtnText: { fontSize: 15, fontWeight: "700", color: TEXT_PRIMARY },
+  bioSection: {
+    marginTop: 16,
+    paddingHorizontal: 8,
+  },
   bio: {
-    marginTop: 24,
+    marginTop: 0,
     fontSize: 14,
     color: SLATE_600,
     textAlign: "center",
     lineHeight: 22,
-    paddingHorizontal: 8,
   },
   bioPlaceholder: {
-    marginTop: 24,
+    marginTop: 0,
     fontSize: 14,
     color: SLATE_500,
     textAlign: "center",
     fontStyle: "italic",
-    paddingHorizontal: 8,
+  },
+  aboutTabContent: {
+    paddingVertical: 24,
+    paddingHorizontal: 20,
+  },
+  aboutLabel: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: SLATE_500,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 12,
+  },
+  aboutBio: {
+    fontSize: 15,
+    color: SLATE_600,
+    lineHeight: 24,
+  },
+  aboutBioEmpty: {
+    fontSize: 14,
+    color: SLATE_500,
+    fontStyle: "italic",
   },
   tabsWrap: {
     flexDirection: "row",

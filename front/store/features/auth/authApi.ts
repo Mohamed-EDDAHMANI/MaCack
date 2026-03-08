@@ -96,6 +96,18 @@ export async function getProfile(): Promise<
   return res.data;
 }
 
+/**
+ * Fetch any user's profile by id (public). Used to display patissiere/client profile from explore.
+ */
+export async function getProfileById(
+  userId: string,
+): Promise<AuthApiResponse<GetProfileResponse>> {
+  const res = await api.get<AuthApiResponse<GetProfileResponse>>(
+    `/s1/auth/profile/${encodeURIComponent(userId)}`,
+  );
+  return res.data;
+}
+
 /* ─── Update profile ─── */
 
 const UPDATE_PROFILE_PATH = "/s1/auth/update-profile";

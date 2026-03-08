@@ -5,6 +5,11 @@ export function getProductDetailPath(productId: string): string {
   return `/(main)/product/${productId}`;
 }
 
+/** User profile route (dynamic by role: patissiere has portfolio, client does not). */
+export function getProfilePath(userId: string): string {
+  return `/(main)/profile/${userId}`;
+}
+
 /**
  * Build a full photo URL from a relative path stored in DB.
  * Returns null if the photo is falsy.

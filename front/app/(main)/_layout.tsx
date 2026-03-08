@@ -16,6 +16,7 @@ export default function MainLayout() {
     >
       <Stack.Screen name="(tabs)" />
       <Stack.Screen name="product/[id]" options={{ title: "Product" }} />
+      <Stack.Screen name="profile/[id]" options={{ title: "Profile" }} />
     </Stack>
   );
 }

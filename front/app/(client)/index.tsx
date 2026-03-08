@@ -27,13 +27,14 @@ import {
   FLOATING_TAB_BAR_BOTTOM_SAFE,
 } from "@/constants/colors";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { fetchProducts, toggleLike } from "@/store/features/catalog";
 import { ProfilePopup } from "@/components/common/profile-popup";
 import { CategoryBadge } from "@/components/common/category-badge";
 import { ProductLikesBadge } from "@/components/common/product-likes-badge";
 import { SearchBar } from "@/components/common/search-bar";
 import { filterProductsBySearchQuery } from "@/lib/product-search";
-import { buildPhotoUrl } from "@/lib/utils";
+import { buildPhotoUrl, getProfilePath } from "@/lib/utils";
 
 function safeImageUrl(raw?: string | null): string | null {
   if (!raw) return null;
@@ -79,6 +80,7 @@ export default function ClientExploreScreen() {
   const [showProfilePopup, setShowProfilePopup] = useState(false);
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { showAuthModal } = useAuthModal();
   const user = useAppSelector((state) => state.auth.user);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const { products, productsLoading, productsError } = useAppSelector((state) => state.catalog);
@@ -271,7 +273,7 @@ export default function ClientExploreScreen() {
                       onPress={(e) => {
                         e.stopPropagation();
                         if (!user) {
-                          router.push("/(auth)/login");
+                          showAuthModal();
                           return;
                         }
                         dispatch(toggleLike(product.id));
@@ -302,7 +304,22 @@ export default function ClientExploreScreen() {
                       <Text style={styles.price}>{product.price.toFixed(2)} MAD</Text>
                     </View>
                     <View style={styles.trendingFooter}>
-                      <View style={styles.chefRow}>
+                      <Pressable
+                        style={styles.chefRow}
+                        onPress={(e) => {
+                          e.stopPropagation();
+                          if (!user) {
+                            showAuthModal();
+                            return;
+                          }
+                          if (pat?.id) {
+                            router.push({
+                              pathname: "/(main)/profile/[id]",
+                              params: { id: String(pat.id) },
+                            } as any);
+                          }
+                        }}
+                      >
                         {pat?.photo ? (
                           <Image source={{ uri: safeImageUrl(pat.photo) ?? "" }} style={styles.chefAvatar} contentFit="cover" />
                         ) : (
@@ -311,7 +328,7 @@ export default function ClientExploreScreen() {
                           </View>
                         )}
                         <Text style={styles.chefName} numberOfLines={1}>{pat?.name ?? "—"}</Text>
-                      </View>
+                      </Pressable>
                       <View style={styles.trendingMetaRow}>
                         <View style={styles.ratingRow}>
                           <MaterialIcons name="star" size={16} color="#eab308" />

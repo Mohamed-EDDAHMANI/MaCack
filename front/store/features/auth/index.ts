@@ -16,7 +16,7 @@ export type {
   ProfileStats,
 } from "./authSlice";
 
-export { login, register, getProfile, updateProfile } from "./authApi";
+export { login, register, getProfile, getProfileById, updateProfile } from "./authApi";
 export type {
   LoginPayload,
   RegisterPayload,

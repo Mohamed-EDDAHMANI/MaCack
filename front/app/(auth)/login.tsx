@@ -8,26 +8,33 @@ import {
   KeyboardAvoidingView,
   Platform,
   ActivityIndicator,
+  StyleSheet,
+  Dimensions,
 } from "react-native";
-import { SafeAreaView } from "react-native-safe-area-context";
+import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { useRouter } from "expo-router";
 import { MaterialIcons, MaterialCommunityIcons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { login as loginUser, setCredentialsFromResponse, logout } from "@/store/features/auth";
 import { useAppDispatch } from "@/store/hooks";
+import {
+  PRIMARY,
+  PRIMARY_TINT,
+  BACKGROUND_LIGHT,
+  SLATE_200,
+  SLATE_400,
+  SLATE_500,
+  SLATE_600,
+  SLATE_700,
+  TEXT_PRIMARY,
+} from "@/constants/colors";
 
-const PRIMARY = "#da1b61";
-const BACKGROUND_LIGHT = "#f8f6f7";
-const SLATE_400 = "#94a3b8";
-const SLATE_600 = "#64748b";
-const SLATE_700 = "#334155";
-const SLATE_800 = "#1e293b";
-const SLATE_200 = "#e2e8f0";
-const SLATE_500 = "#64748b";
+const { height: WINDOW_HEIGHT } = Dimensions.get("window");
 
 export default function LoginScreen() {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const insets = useSafeAreaInsets();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
@@ -47,7 +54,7 @@ export default function LoginScreen() {
 
     setSubmitting(true);
     setErrorMessage(null);
-    dispatch(logout()); // reset any previous user data before login
+    dispatch(logout());
 
     try {
       const response = await loginUser({ email: trimmedEmail, password });
@@ -69,86 +76,58 @@ export default function LoginScreen() {
     }
   };
 
+  const contentMinHeight = WINDOW_HEIGHT - insets.top - insets.bottom;
+
   return (
-    <SafeAreaView
-      className="flex-1"
-      style={{ backgroundColor: BACKGROUND_LIGHT }}
-      edges={["top"]}
-    >
-      <View className="flex-1">
+    <SafeAreaView style={styles.safe} edges={["top", "bottom"]}>
+      <View style={styles.container}>
         <LinearGradient
           colors={["rgba(218, 27, 97, 0.12)", "transparent"]}
           start={{ x: 0.5, y: 1 }}
           end={{ x: 0.5, y: 0 }}
-          style={{
-            position: "absolute",
-            left: 0,
-            right: 0,
-            bottom: 0,
-            height: 160,
-            zIndex: -1,
-          }}
+          style={styles.gradient}
           pointerEvents="none"
         />
 
+        {/* Top bar – fixed */}
+        <View style={[styles.topBar, { paddingTop: insets.top + 12 }]}>
+          <Pressable
+            onPress={() => router.replace("/(main)")}
+            style={styles.closeBtn}
+          >
+            <MaterialIcons name="close" size={24} color={TEXT_PRIMARY} />
+          </Pressable>
+          <Text style={styles.topBarTitle}>MaCack</Text>
+          <View style={styles.closeBtn} />
+        </View>
+
         <KeyboardAvoidingView
           behavior={Platform.OS === "ios" ? "padding" : "height"}
-          className="flex-1"
+          style={styles.keyboard}
         >
           <ScrollView
-            contentContainerStyle={{ flexGrow: 1, justifyContent: "center" }}
+            contentContainerStyle={[styles.scrollContent, { minHeight: contentMinHeight }]}
             keyboardShouldPersistTaps="handled"
-            className="flex-1 px-6"
             showsVerticalScrollIndicator={false}
           >
-            {/* Top Bar */}
-            <View className="flex-row items-center justify-between py-4 absolute top-0 left-0 right-0 px-6 z-10">
-              <Pressable
-                onPress={() => {
-                  if (router.canGoBack()) {
-                    router.back();
-                  } else {
-                    router.replace("/(main)");
-                  }
-                }}
-                className="w-10 h-10 rounded-full items-center justify-center"
-                style={{ backgroundColor: "rgba(218, 27, 97, 0.1)" }}
-              >
-                <MaterialIcons name="close" size={24} color="#0f172a" />
-              </Pressable>
-              <Text className="text-lg font-bold text-slate-900 flex-1 text-center pr-10">
-                MaCack
-              </Text>
-            </View>
-
-            <View className="max-w-md mx-auto w-full pt-16">
+            <View style={styles.centeredBlock}>
               {/* Hero */}
-              <View className="items-center mb-10">
-                <View
-                  className="w-24 h-24 rounded-3xl mb-6 items-center justify-center"
-                  style={{ backgroundColor: "rgba(218, 27, 97, 0.1)" }}
-                >
+              <View style={styles.hero}>
+                <View style={styles.heroIconWrap}>
                   <MaterialIcons name="cake" size={48} color={PRIMARY} />
                 </View>
-                <Text className="text-3xl font-bold text-slate-900 tracking-tight mb-2 text-center">
-                  Welcome Back
-                </Text>
-                <Text className="text-center" style={{ color: SLATE_600 }}>
+                <Text style={styles.heroTitle}>Welcome Back</Text>
+                <Text style={styles.heroSubtitle}>
                   Login to your premium pastry marketplace
                 </Text>
               </View>
 
               {/* Form */}
-              <View className="space-y-4">
-                <View className="mb-4">
-                  <Text className="text-sm font-semibold mb-1.5 ml-1" style={{ color: SLATE_700 }}>
-                    Email Address
-                  </Text>
-                  <View
-                    className="flex-row items-center h-14 rounded-xl border px-4 bg-white"
-                    style={{ borderColor: SLATE_200 }}
-                  >
-                    <MaterialIcons name="mail-outline" size={22} color={SLATE_400} style={{ marginRight: 12 }} />
+              <View style={styles.form}>
+                <View style={styles.field}>
+                  <Text style={styles.label}>Email Address</Text>
+                  <View style={styles.inputWrap}>
+                    <MaterialIcons name="mail-outline" size={22} color={SLATE_400} style={styles.inputIcon} />
                     <TextInput
                       placeholder="chef@macack.com"
                       placeholderTextColor={SLATE_400}
@@ -156,34 +135,27 @@ export default function LoginScreen() {
                       onChangeText={setEmail}
                       keyboardType="email-address"
                       autoCapitalize="none"
-                      className="flex-1 text-base text-slate-900 py-0"
+                      style={styles.input}
                     />
                   </View>
                 </View>
 
-                <View className="mb-4">
-                  <View className="flex-row justify-between items-center mb-1.5 px-1">
-                    <Text className="text-sm font-semibold" style={{ color: SLATE_700 }}>
-                      Password
-                    </Text>
+                <View style={styles.field}>
+                  <View style={styles.labelRow}>
+                    <Text style={styles.label}>Password</Text>
                     <Pressable hitSlop={8}>
-                      <Text className="text-xs font-bold" style={{ color: PRIMARY }}>
-                        Forgot password?
-                      </Text>
+                      <Text style={styles.forgotLink}>Forgot password?</Text>
                     </Pressable>
                   </View>
-                  <View
-                    className="flex-row items-center h-14 rounded-xl border px-4 bg-white"
-                    style={{ borderColor: SLATE_200 }}
-                  >
-                    <MaterialIcons name="lock-outline" size={22} color={SLATE_400} style={{ marginRight: 12 }} />
+                  <View style={styles.inputWrap}>
+                    <MaterialIcons name="lock-outline" size={22} color={SLATE_400} style={styles.inputIcon} />
                     <TextInput
                       placeholder="••••••••"
                       placeholderTextColor={SLATE_400}
                       value={password}
                       onChangeText={setPassword}
                       secureTextEntry={!showPassword}
-                      className="flex-1 text-base text-slate-900 py-0"
+                      style={styles.input}
                     />
                     <Pressable onPress={() => setShowPassword(!showPassword)} hitSlop={8}>
                       <MaterialIcons
@@ -196,81 +168,50 @@ export default function LoginScreen() {
                 </View>
 
                 {errorMessage ? (
-                  <View
-                    className="mt-2 px-3 py-2 rounded-lg"
-                    style={{ backgroundColor: "rgba(220, 38, 38, 0.1)" }}
-                  >
-                    <Text className="text-sm" style={{ color: "#b91c1c" }}>
-                      {errorMessage}
-                    </Text>
+                  <View style={styles.errorBox}>
+                    <Text style={styles.errorText}>{errorMessage}</Text>
                   </View>
                 ) : null}
 
                 <Pressable
                   onPress={handleSignIn}
                   disabled={submitting}
-                  className="w-full h-14 rounded-xl items-center justify-center mt-4 active:opacity-90"
-                  style={{
-                    backgroundColor: submitting ? SLATE_400 : PRIMARY,
-                    shadowColor: PRIMARY,
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.25,
-                    shadowRadius: 8,
-                    elevation: 4,
-                  }}
+                  style={[styles.submitBtn, submitting && styles.submitBtnDisabled]}
                 >
                   {submitting ? (
                     <ActivityIndicator size="small" color="#fff" />
                   ) : (
-                    <Text className="text-white font-bold text-base">Sign In</Text>
+                    <Text style={styles.submitBtnText}>Sign In</Text>
                   )}
                 </Pressable>
               </View>
 
               {/* Divider */}
-              <View className="relative my-10">
-                <View className="absolute inset-0 justify-center">
-                  <View className="h-px w-full" style={{ backgroundColor: SLATE_200 }} />
-                </View>
-                <View className="items-center">
-                  <View className="px-4" style={{ backgroundColor: BACKGROUND_LIGHT }}>
-                    <Text className="text-xs uppercase font-medium" style={{ color: SLATE_500 }}>
-                      Or continue with
-                    </Text>
-                  </View>
+              <View style={styles.dividerWrap}>
+                <View style={styles.dividerLine} />
+                <View style={styles.dividerTextWrap}>
+                  <Text style={styles.dividerText}>Or continue with</Text>
                 </View>
               </View>
 
               {/* Social */}
-              <View className="flex-row gap-4 mb-8">
-                <Pressable
-                  className="flex-1 h-14 rounded-xl flex-row items-center justify-center border"
-                  style={{ borderColor: SLATE_200, backgroundColor: "#fff" }}
-                >
+              <View style={styles.socialRow}>
+                <Pressable style={styles.socialBtn}>
                   <MaterialIcons name="apple" size={22} color="#000" style={{ marginRight: 8 }} />
-                  <Text className="text-sm font-semibold text-slate-900">Apple</Text>
+                  <Text style={styles.socialBtnText}>Apple</Text>
                 </Pressable>
-                <Pressable
-                  className="flex-1 h-14 rounded-xl flex-row items-center justify-center border"
-                  style={{ borderColor: SLATE_200, backgroundColor: "#fff" }}
-                >
+                <Pressable style={styles.socialBtn}>
                   <MaterialCommunityIcons name="google" size={22} color="#4285F4" style={{ marginRight: 8 }} />
-                  <Text className="text-sm font-semibold text-slate-900">Google</Text>
+                  <Text style={styles.socialBtnText}>Google</Text>
                 </Pressable>
               </View>
 
               {/* Footer */}
-              <View className="mb-8 px-2">
-                <View className="flex-row flex-wrap items-center justify-center">
-                  <Text className="text-sm text-center" style={{ color: SLATE_500 }}>
-                    Don't have an account?{" "}
-                  </Text>
-                  <Pressable onPress={() => router.push("/(auth)/register")} hitSlop={8}>
-                    <Text className="text-sm font-bold" style={{ color: PRIMARY }}>
-                      Join the Bakery
-                    </Text>
-                  </Pressable>
-                </View>
+              <View style={styles.footer}>
+                <Text style={styles.footerText}>Don't have an account? </Text>
+                <Pressable onPress={() => router.push("/(auth)/register")} hitSlop={8}>
+                  <Text style={styles.footerLink}>Join the Bakery</Text>
+                </Pressable>
               </View>
             </View>
           </ScrollView>
@@ -279,3 +220,226 @@ export default function LoginScreen() {
     </SafeAreaView>
   );
 }
+
+const styles = StyleSheet.create({
+  safe: {
+    flex: 1,
+    backgroundColor: BACKGROUND_LIGHT,
+  },
+  container: {
+    flex: 1,
+  },
+  gradient: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    bottom: 0,
+    height: 160,
+    zIndex: 0,
+  },
+  topBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 24,
+    paddingBottom: 12,
+    zIndex: 10,
+  },
+  closeBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: PRIMARY_TINT,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  topBarTitle: {
+    fontSize: 18,
+    fontWeight: "700",
+    color: TEXT_PRIMARY,
+  },
+  keyboard: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    justifyContent: "center",
+    paddingHorizontal: 24,
+    paddingVertical: 24,
+  },
+  centeredBlock: {
+    maxWidth: 400,
+    width: "100%",
+    alignSelf: "center",
+  },
+  hero: {
+    alignItems: "center",
+    marginBottom: 40,
+  },
+  heroIconWrap: {
+    width: 96,
+    height: 96,
+    borderRadius: 24,
+    backgroundColor: PRIMARY_TINT,
+    alignItems: "center",
+    justifyContent: "center",
+    marginBottom: 24,
+  },
+  heroTitle: {
+    fontSize: 28,
+    fontWeight: "700",
+    color: TEXT_PRIMARY,
+    marginBottom: 8,
+    textAlign: "center",
+  },
+  heroSubtitle: {
+    fontSize: 15,
+    color: SLATE_600,
+    textAlign: "center",
+  },
+  form: {
+    marginBottom: 8,
+  },
+  field: {
+    marginBottom: 16,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: SLATE_700,
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  labelRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 6,
+    marginLeft: 4,
+  },
+  inputWrap: {
+    flexDirection: "row",
+    alignItems: "center",
+    height: 56,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: SLATE_200,
+    backgroundColor: "#fff",
+    paddingHorizontal: 16,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: TEXT_PRIMARY,
+    paddingVertical: 0,
+  },
+  forgotLink: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+  errorBox: {
+    marginTop: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    backgroundColor: "rgba(220, 38, 38, 0.1)",
+  },
+  errorText: {
+    fontSize: 14,
+    color: "#b91c1c",
+  },
+  submitBtn: {
+    width: "100%",
+    height: 56,
+    borderRadius: 12,
+    alignItems: "center",
+    justifyContent: "center",
+    marginTop: 24,
+    backgroundColor: PRIMARY,
+    ...Platform.select({
+      ios: {
+        shadowColor: PRIMARY,
+        shadowOffset: { width: 0, height: 4 },
+        shadowOpacity: 0.25,
+        shadowRadius: 8,
+      },
+      android: { elevation: 4 },
+    }),
+  },
+  submitBtnDisabled: {
+    backgroundColor: SLATE_400,
+  },
+  submitBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  dividerWrap: {
+    marginVertical: 32,
+    position: "relative",
+    alignItems: "center",
+  },
+  dividerLine: {
+    position: "absolute",
+    left: 0,
+    right: 0,
+    top: "50%",
+    height: 1,
+    backgroundColor: SLATE_200,
+  },
+  dividerTextWrap: {
+    paddingHorizontal: 16,
+    backgroundColor: BACKGROUND_LIGHT,
+  },
+  dividerText: {
+    fontSize: 12,
+    fontWeight: "600",
+    color: SLATE_500,
+    textTransform: "uppercase",
+  },
+  socialRow: {
+    flexDirection: "row",
+    gap: 16,
+    marginBottom: 32,
+  },
+  socialBtn: {
+    flex: 1,
+    height: 56,
+    borderRadius: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1,
+    borderColor: SLATE_200,
+    backgroundColor: "#fff",
+  },
+  socialBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: TEXT_PRIMARY,
+  },
+  footer: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 8,
+  },
+  footerText: {
+    fontSize: 14,
+    color: SLATE_500,
+  },
+  footerLink: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: PRIMARY,
+  },
+});
