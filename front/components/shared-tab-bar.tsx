@@ -139,6 +139,7 @@ export function getSharedTabBarScreenOptions() {
         left: TAB_BAR_HORIZONTAL,
         right: TAB_BAR_HORIZONTAL,
         borderRadius: 9999,
+        marginHorizontal: 15,
         height: 64,
         paddingTop: 0,
         paddingBottom: 0,
