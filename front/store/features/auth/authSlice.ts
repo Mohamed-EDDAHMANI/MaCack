@@ -48,10 +48,11 @@ export interface AuthApiResponse<T = AuthResponseData | null> {
   path?: string;
 }
 
-/** Profile stats from get-profile (rating + followers). */
+/** Profile stats from get-profile (rating + followers + profile likes). */
 export interface ProfileStats {
   rating: { average: number; count: number };
   followersCount: number;
+  likesCount: number;
 }
 
 export interface AuthState {

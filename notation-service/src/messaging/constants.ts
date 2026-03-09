@@ -21,6 +21,11 @@ export const NOTATION_PATTERNS = {
   FOLLOWER_LIST: 'follower/list',
   FOLLOWER_COUNT: 'follower/count',
   FOLLOWER_CHECK: 'follower/check',
+
+  // Profile like (like a patissier's profile)
+  PROFILE_LIKE_TOGGLE: 'profile-like/toggle',
+  PROFILE_LIKE_COUNT: 'profile-like/count',
+  PROFILE_LIKE_CHECK: 'profile-like/check',
 } as const;
 
 // RabbitMQ Client Tokens

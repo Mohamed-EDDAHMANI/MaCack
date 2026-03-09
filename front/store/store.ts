@@ -13,17 +13,21 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { authReducer } from "./features/auth";
 import { catalogReducer } from "./features/catalog";
 import { followReducer } from "./features/follow";
+import { profileLikeReducer } from "./features/profileLike";
+import { cartReducer } from "./features/cart/cartSlice";
 
 const persistConfig = {
   key: "root",
   storage: AsyncStorage,
-  whitelist: ["auth"], // only persist auth slice
+  whitelist: ["auth", "cart"], // persist auth + cart
 };
 
 const rootReducer = combineReducers({
   auth: authReducer,
   catalog: catalogReducer,
   follow: followReducer,
+  profileLike: profileLikeReducer,
+  cart: cartReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

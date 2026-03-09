@@ -16,10 +16,12 @@ import { LinearGradient } from "expo-linear-gradient";
 import { MaterialIcons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
+import { useAuthModal } from "@/contexts/AuthModalContext";
 import { logout, getProfile, setProfileStats, updateUser } from "@/store/features/auth";
 import type { Product } from "@/store/features/catalog";
 import { toggleLike } from "@/store/features/catalog";
 import { toggleFollow } from "@/store/features/follow";
+import { toggleProfileLike } from "@/store/features/profileLike";
 import { buildPhotoUrl, getProductDetailPath } from "@/lib/utils";
 import {
   PRIMARY,
@@ -77,6 +79,7 @@ const CELL_SIZE = (SCREEN_WIDTH - GRID_PADDING * 2 - GRID_GAP * 2) / 3;
 export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, showBack }: ProfileContentProps) {
   const router = useRouter();
   const dispatch = useAppDispatch();
+  const { showAuthModal } = useAuthModal();
   const authUser = useAppSelector((state) => state.auth.user);
   const profileStats = useAppSelector((state) => state.auth.profileStats);
   const profileUser = viewedUser ?? authUser;
@@ -85,6 +88,12 @@ export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, sh
     viewedUser?.id ? state.follow.statusByPatissiere[viewedUser.id] : undefined
   );
   const followLoading = useAppSelector((state) => state.follow.followLoading);
+  const profileLikeStatus = useAppSelector((state) =>
+    viewedUser?.id ? state.profileLike.statusByPatissiere[viewedUser.id] : undefined
+  );
+  const profileLikeLoading = useAppSelector(
+    (state) => state.profileLike.profileLikeLoading
+  );
   const portfolioProducts = useMemo(() => {
     const uid = profileUser?.id;
     if (!uid) return [];
@@ -106,6 +115,7 @@ export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, sh
           setProfileStats({
             rating: res.data.rating,
             followersCount: res.data.followersCount,
+            likesCount: res.data.likesCount ?? 0,
           }),
         );
       }
@@ -250,6 +260,21 @@ export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, sh
                   </Text>
                   <Text style={styles.statMuted}>Followers</Text>
                 </View>
+                <View style={styles.statDot} />
+                <View style={styles.statItem}>
+                  <Text style={styles.statBold}>
+                    {(() => {
+                      const count =
+                        isOwnProfile && profileStats != null
+                          ? profileStats.likesCount ?? 0
+                          : profileLikeStatus?.count ?? 0;
+                      return count >= 1000
+                        ? `${(count / 1000).toFixed(1)}k`
+                        : String(count);
+                    })()}
+                  </Text>
+                  <Text style={styles.statMuted}>Likes</Text>
+                </View>
               </>
             )}
           </View>
@@ -265,7 +290,7 @@ export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, sh
             )}
           </View>
 
-          {/* Follow / Message buttons after bio */}
+          {/* Follow / Like profile / Message buttons after bio */}
           {!isOwnProfile && viewedUser?.id ? (
             <View style={styles.actionRow}>
               <Pressable
@@ -293,6 +318,53 @@ export function ProfileContent({ menuItems = [], viewedUser, viewedUserStats, sh
                     >
                       {followStatus?.following ? "Following" : "Follow"}
                     </Text>
+                  </>
+                )}
+              </Pressable>
+              <Pressable
+                style={[
+                  styles.likeProfileBtn,
+                  profileLikeStatus?.liked && styles.likeProfileBtnLiked,
+                ]}
+                onPress={() => {
+                  if (!authUser) {
+                    showAuthModal();
+                    return;
+                  }
+                  dispatch(toggleProfileLike(viewedUser.id));
+                }}
+                disabled={profileLikeLoading}
+              >
+                {profileLikeLoading ? (
+                  <ActivityIndicator
+                    size="small"
+                    color={profileLikeStatus?.liked ? "#fff" : SLATE_600}
+                  />
+                ) : (
+                  <>
+                    <MaterialIcons
+                      name={profileLikeStatus?.liked ? "favorite" : "favorite-border"}
+                      size={20}
+                      color={profileLikeStatus?.liked ? "#fff" : SLATE_600}
+                    />
+                    <Text
+                      style={[
+                        styles.likeProfileBtnText,
+                        profileLikeStatus?.liked && styles.likeProfileBtnTextLiked,
+                      ]}
+                    >
+                      {profileLikeStatus?.liked ? "Liked" : "Like"}
+                    </Text>
+                    {profileLikeStatus?.count != null && profileLikeStatus.count > 0 ? (
+                      <Text
+                        style={[
+                          styles.likeProfileCountText,
+                          profileLikeStatus?.liked && styles.likeProfileCountTextLiked,
+                        ]}
+                      >
+                        {profileLikeStatus.count}
+                      </Text>
+                    ) : null}
                   </>
                 )}
               </Pressable>
@@ -585,6 +657,26 @@ const styles = StyleSheet.create({
   },
   followBtnText: { fontSize: 15, fontWeight: "600", color: "#fff" },
   followBtnTextFollowing: { color: SLATE_700, fontWeight: "600" },
+  likeProfileBtn: {
+    flex: 1,
+    height: 44,
+    backgroundColor: BORDER_SUBTLE,
+    borderRadius: 22,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    borderWidth: 1.5,
+    borderColor: BORDER,
+  },
+  likeProfileBtnLiked: {
+    backgroundColor: PRIMARY,
+    borderColor: PRIMARY,
+  },
+  likeProfileBtnText: { fontSize: 15, fontWeight: "600", color: SLATE_600 },
+  likeProfileBtnTextLiked: { color: "#fff", fontWeight: "600" },
+  likeProfileCountText: { fontSize: 13, fontWeight: "700", color: SLATE_600 },
+  likeProfileCountTextLiked: { color: "#fff", fontWeight: "700" },
   messageBtn: {
     flex: 1,
     height: 44,

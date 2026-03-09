@@ -1,10 +1,11 @@
-import ClientSearchScreen from "../../(client)/search";
+import ClientCartScreen from "../../(client)/cart";
 import { TabScreenWithAnimation } from "@/components/TabScreenWithAnimation";
 
-export default function MainSearchScreen() {
+export default function MainCartScreen() {
   return (
     <TabScreenWithAnimation>
-      <ClientSearchScreen />
+      <ClientCartScreen />
     </TabScreenWithAnimation>
   );
 }
+

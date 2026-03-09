@@ -11,6 +11,7 @@ import {
   NativeScrollEvent,
   ScrollView,
   Dimensions,
+  TextInput,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -31,11 +32,39 @@ import {
 import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { useAuthModal } from "@/contexts/AuthModalContext";
 import { fetchProductById, toggleLike, clearSelectedProduct } from "@/store/features/catalog";
+import { toggleFollow } from "@/store/features/follow";
+import { addItem } from "@/store/features/cart/cartSlice";
 import { buildPhotoUrl } from "@/lib/utils";
 
 const HERO_HEIGHT = 400;
 const STAR_YELLOW = "#eab308";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
+
+const COLOR_OPTIONS = [
+  "#D81B60",
+  "#FFD700",
+  "#F4C2C2",
+  "#FFFFFF",
+  "#4A2C2A",
+  "#FF6B6B",
+  "#FF8C00",
+  "#8A2BE2",
+  "#00B894",
+  "#0984E3",
+  "#FF69B4",
+  "#A3CB38",
+];
+
+const GARNISH_OPTIONS = [
+  { id: "rose", icon: "local-florist" as const, label: "Rose Petals" },
+  { id: "gold", icon: "star" as const, label: "Gold Flakes" },
+  { id: "pearls", icon: "cake" as const, label: "Sugar Pearls" },
+  { id: "mint", icon: "spa" as const, label: "Mint Sprig" },
+  { id: "berries", icon: "emoji-food-beverage" as const, label: "Fresh Berries" },
+  { id: "choco", icon: "icecream" as const, label: "Chocolate Shards" },
+];
+
+const MAX_GARNISHES = 3;
 
 function safeImageUrl(raw?: string | null): string | null {
   if (!raw) return null;
@@ -65,6 +94,10 @@ export default function ProductDetailScreen() {
   const product = selectedProduct?.id === id ? selectedProduct : productFromList;
   const isLiked = user?.id && (product?.likedByUserIds ?? []).includes(user.id);
   const insets = useSafeAreaInsets();
+  const followStatus = useAppSelector((state) =>
+    product?.patissiere?.id ? state.follow.statusByPatissiere[product.patissiere.id] : undefined
+  );
+  const followLoading = useAppSelector((state) => state.follow.followLoading);
 
   useEffect(() => {
     if (id) {
@@ -158,6 +191,13 @@ export default function ProductDetailScreen() {
   const likesCount = product.likesCount ?? 0;
   const categoryName = product.category?.name?.toUpperCase() ?? "";
 
+  const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
+  const [customizerStep, setCustomizerStep] = useState<"choice" | "full">("choice");
+  const sheetAnim = useRef(new Animated.Value(0)).current;
+  const [selectedColor, setSelectedColor] = useState<string>(COLOR_OPTIONS[0]);
+  const [selectedGarnishes, setSelectedGarnishes] = useState<string[]>([]);
+  const [specialMessage, setSpecialMessage] = useState("");
+
   const scrollY = useRef(new Animated.Value(0)).current;
   const FADE_SCROLL_RANGE = 100;
   const [iconsTappable, setIconsTappable] = useState(true);
@@ -187,6 +227,86 @@ export default function ProductDetailScreen() {
   // by +scrollY so it visually stays pinned to the top of the screen.
   // The inner horizontal ScrollView still gets horizontal swipe events normally.
   const heroTranslateY = scrollY;
+
+  const openCustomizer = () => {
+    setCustomizerStep("choice");
+    setIsCustomizerOpen(true);
+    Animated.spring(sheetAnim, {
+      toValue: 1,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 6,
+    }).start();
+  };
+
+  const closeCustomizer = () => {
+    Animated.spring(sheetAnim, {
+      toValue: 0,
+      useNativeDriver: true,
+      speed: 24,
+      bounciness: 0,
+    }).start(({ finished }) => {
+      if (finished) {
+        setIsCustomizerOpen(false);
+        setCustomizerStep("choice");
+      }
+    });
+  };
+
+  const toggleGarnish = (id: string) => {
+    setSelectedGarnishes((prev) => {
+      const exists = prev.includes(id);
+      if (exists) return prev.filter((g) => g !== id);
+      if (prev.length >= MAX_GARNISHES) return prev;
+      return [...prev, id];
+    });
+  };
+
+  const totalPrice = useMemo(() => {
+    const base = product.price ?? 0;
+    // Simple example: each garnish adds a small extra
+    const extras = selectedGarnishes.length * 5;
+    return base + extras;
+  }, [product.price, selectedGarnishes.length]);
+
+  const firstImageUri = imageUris[0];
+
+  const handleSkipCustomization = () => {
+    dispatch(
+      addItem({
+        productId: String(product.id),
+        title: product.title,
+        price: product.price ?? 0,
+        quantity: 1,
+        imageUri: firstImageUri,
+        colors: undefined,
+        garnish: undefined,
+        message: undefined,
+      })
+    );
+    closeCustomizer();
+  };
+
+  const handleAddCustomizedToCart = () => {
+    const garnishLabel = selectedGarnishes
+      .map((id) => GARNISH_OPTIONS.find((g) => g.id === id)?.label)
+      .filter(Boolean)
+      .join(", ");
+
+    dispatch(
+      addItem({
+        productId: String(product.id),
+        title: product.title,
+        price: totalPrice,
+        quantity: 1,
+        imageUri: firstImageUri,
+        colors: selectedColor,
+        garnish: garnishLabel || undefined,
+        message: specialMessage || undefined,
+      })
+    );
+    closeCustomizer();
+  };
 
   return (
     <View style={styles.safe} key={id}>
@@ -343,6 +463,12 @@ export default function ProductDetailScreen() {
 
           {pat && (
             <View style={styles.chefCard}>
+              {/* Header accent strip */}
+              <LinearGradient
+                colors={[PRIMARY_TINT, "transparent"]}
+                style={styles.chefCardAccent}
+                pointerEvents="none"
+              />
               <Pressable
                 style={styles.chefCardRow}
                 onPress={() => {
@@ -352,41 +478,94 @@ export default function ProductDetailScreen() {
                 }}
               >
                 <View style={styles.chefMain}>
-                  <View style={styles.chefAvatarWrap}>
-                    {pat.photo ? (
-                      <Image
-                        source={{ uri: safeImageUrl(pat.photo) ?? "" }}
-                        style={styles.chefAvatar}
-                      />
-                    ) : (
-                      <View style={[styles.chefAvatar, styles.chefAvatarPlaceholder]}>
-                        <MaterialIcons name="person" size={28} color={SLATE_400} />
-                      </View>
-                    )}
+                  {/* Avatar with ring */}
+                  <View style={styles.chefAvatarRing}>
+                    <View style={styles.chefAvatarWrap}>
+                      {pat.photo ? (
+                        <Image
+                          source={{ uri: safeImageUrl(pat.photo) ?? "" }}
+                          style={styles.chefAvatar}
+                        />
+                      ) : (
+                        <View style={[styles.chefAvatar, styles.chefAvatarPlaceholder]}>
+                          <MaterialIcons name="person" size={28} color={SLATE_400} />
+                        </View>
+                      )}
+                    </View>
                   </View>
+
                   <View style={styles.chefInfo}>
-                    <Text style={styles.chefLabel}>Created by</Text>
+                    <Text style={styles.chefLabel}>CREATED BY</Text>
                     <Text style={styles.chefName}>{pat.name}</Text>
                     {pat.city ? (
                       <View style={styles.chefLocationRow}>
-                        <MaterialIcons name="location-on" size={12} color={SLATE_500} />
-                        <Text style={styles.chefLocation}>{pat.city}</Text>
+                        <View style={styles.chefLocationInner}>
+                          <MaterialIcons name="location-on" size={11} color={SLATE_500} />
+                          <Text style={styles.chefLocation}>{pat.city}</Text>
+                        </View>
+                        <Pressable
+                          style={[
+                            styles.chefFollowBtn,
+                            followStatus?.following && styles.chefFollowBtnFollowing,
+                          ]}
+                          onPress={(e) => {
+                            e.stopPropagation();
+                            if (!user) {
+                              showAuthModal();
+                              return;
+                            }
+                            dispatch(toggleFollow(pat.id));
+                          }}
+                          disabled={followLoading}
+                        >
+                          {followLoading ? (
+                            <ActivityIndicator
+                              size="small"
+                              color={followStatus?.following ? SLATE_600 : PRIMARY}
+                            />
+                          ) : (
+                            <>
+                              <MaterialIcons
+                                name={followStatus?.following ? "check" : "person-add"}
+                                size={13}
+                                color={followStatus?.following ? "#fff" : "#fff"}
+                              />
+                              <Text
+                                style={[
+                                  styles.chefFollowText,
+                                  followStatus?.following && styles.chefFollowTextFollowing,
+                                ]}
+                              >
+                                {followStatus?.following ? "Following" : "Follow"}
+                              </Text>
+                            </>
+                          )}
+                        </Pressable>
                       </View>
                     ) : null}
                   </View>
                 </View>
+
+                {/* Chat button */}
                 <Pressable style={styles.chatBtn} onPress={(e) => e.stopPropagation()}>
-                  <MaterialIcons name="chat-bubble-outline" size={20} color={PRIMARY} />
+                  <MaterialIcons name="chat-bubble-outline" size={18} color={PRIMARY} />
                 </Pressable>
               </Pressable>
+
+              {/* Divider */}
+              <View style={styles.chefDivider} />
+
+              {/* Footer */}
               <View style={styles.chefCardFooter}>
                 <View style={styles.creatorRatingRow}>
-                  <MaterialIcons name="star" size={14} color={STAR_YELLOW} />
-                  <Text style={styles.creatorRatingText}>
-                    {(rating || 0).toFixed(1)} Creator Rating
-                  </Text>
+                  <View style={styles.ratingBadge}>
+                    <MaterialIcons name="star" size={12} color="#fff" />
+                    <Text style={styles.ratingBadgeText}>{(rating || 0).toFixed(1)}</Text>
+                  </View>
+                  <Text style={styles.creatorRatingText}>Creator Rating</Text>
                 </View>
                 <Pressable
+                  style={styles.viewPortfolioBtn}
                   onPress={(e) => {
                     e.stopPropagation();
                     if (!user) { showAuthModal(); return; }
@@ -394,7 +573,8 @@ export default function ProductDetailScreen() {
                       router.push({ pathname: "/(main)/profile/[id]", params: { id: String(pat.id) } } as any);
                   }}
                 >
-                  <Text style={styles.viewPortfolio}>View Portfolio</Text>
+                  <Text style={styles.viewPortfolio}>Portfolio</Text>
+                  <MaterialIcons name="arrow-forward-ios" size={10} color={PRIMARY} />
                 </Pressable>
               </View>
             </View>
@@ -417,6 +597,7 @@ export default function ProductDetailScreen() {
               </View>
             </View>
           </View>
+
         </View>
         <View style={{ height: 120 }} />
       </Animated.ScrollView>
@@ -429,11 +610,186 @@ export default function ProductDetailScreen() {
             {product.price != null ? `${product.price.toFixed(2)} MAD` : "—"}
           </Text>
         </View>
-        <Pressable style={styles.orderBtn}>
+        <Pressable style={styles.orderBtn} onPress={openCustomizer}>
           <Text style={styles.orderBtnText}>Order Now</Text>
           <MaterialIcons name="arrow-forward" size={20} color="#fff" />
         </Pressable>
       </View>
+
+      {isCustomizerOpen && (
+        <>
+          <Animated.View
+            style={[
+              styles.customizerOverlay,
+              {
+                opacity: sheetAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0, 1],
+                }),
+              },
+            ]}
+          >
+            <Pressable style={StyleSheet.absoluteFill} onPress={closeCustomizer} />
+          </Animated.View>
+
+          <Animated.View
+            style={[
+              styles.customizerSheet,
+              {
+                transform: [
+                  {
+                    translateY: sheetAnim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [400, 0],
+                    }),
+                  },
+                ],
+                opacity: sheetAnim.interpolate({
+                  inputRange: [0, 1],
+                  outputRange: [0.6, 1],
+                }),
+              },
+            ]}
+          >
+            <View style={styles.customizerHandle} />
+            {customizerStep === "choice" ? (
+              <>
+                <View style={styles.customizerHeader}>
+                  <Text style={styles.customizerTitle}>Customize your order?</Text>
+                  <Pressable style={styles.customizerCloseBtn} onPress={closeCustomizer}>
+                    <MaterialIcons name="close" size={18} color={SLATE_600} />
+                  </Pressable>
+                </View>
+                <View style={styles.choiceBody}>
+                  <Text style={styles.choiceText}>
+                    Do you want to customize this order or skip this step?
+                  </Text>
+                  <View style={styles.choiceButtonsRow}>
+                    <Pressable style={styles.choiceSecondaryBtn} onPress={handleSkipCustomization}>
+                      <Text style={styles.choiceSecondaryText}>Skip this step</Text>
+                    </Pressable>
+                    <Pressable
+                      style={styles.choicePrimaryBtn}
+                      onPress={() => setCustomizerStep("full")}
+                    >
+                      <Text style={styles.choicePrimaryText}>Customize order</Text>
+                    </Pressable>
+                  </View>
+                </View>
+              </>
+            ) : (
+              <>
+                <View style={styles.customizerHeader}>
+                  <Text style={styles.customizerTitle}>Customize Your Order</Text>
+                  <Pressable style={styles.customizerCloseBtn} onPress={closeCustomizer}>
+                    <MaterialIcons name="close" size={18} color={SLATE_600} />
+                  </Pressable>
+                </View>
+
+                <ScrollView
+                  style={styles.customizerScroll}
+                  contentContainerStyle={styles.customizerScrollContent}
+                  showsVerticalScrollIndicator={false}
+                >
+                  <View style={styles.customizerSection}>
+                    <Text style={styles.customizerSectionLabel}>CHOOSE COLORS</Text>
+                    <View style={styles.colorRow}>
+                      {COLOR_OPTIONS.map((color) => {
+                        const active = color === selectedColor;
+                        return (
+                          <Pressable
+                            key={color}
+                            onPress={() => setSelectedColor(color)}
+                            style={[
+                              styles.colorOuter,
+                              active && { borderColor: PRIMARY, borderWidth: 2 },
+                            ]}
+                          >
+                            <View style={[styles.colorInner, { backgroundColor: color }]} />
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.customizerSection}>
+                    <View style={styles.customizerSectionHeaderRow}>
+                      <Text style={styles.customizerSectionLabel}>GARNITURE</Text>
+                      <Text style={styles.customizerSectionHint}>Select up to 3</Text>
+                    </View>
+                    <View style={styles.garnishRow}>
+                      {GARNISH_OPTIONS.map((g) => {
+                        const active = selectedGarnishes.includes(g.id);
+                        return (
+                          <Pressable
+                            key={g.id}
+                            onPress={() => toggleGarnish(g.id)}
+                            style={[
+                              styles.garnishPill,
+                              active && styles.garnishPillActive,
+                            ]}
+                          >
+                            <MaterialIcons
+                              name={g.icon}
+                              size={18}
+                              color={PRIMARY}
+                              style={{ opacity: active ? 1 : 0.9 }}
+                            />
+                            <Text
+                              style={[
+                                styles.garnishText,
+                                active && styles.garnishTextActive,
+                              ]}
+                            >
+                              {g.label}
+                            </Text>
+                          </Pressable>
+                        );
+                      })}
+                    </View>
+                  </View>
+
+                  <View style={styles.customizerSection}>
+                    <Text style={styles.customizerSectionLabel}>ADD A SPECIAL MESSAGE</Text>
+                    <View style={styles.messageWrap}>
+                      <TextInput
+                        style={styles.messageInput}
+                        placeholder="Example: Happy Anniversary Sarah! ❤️"
+                        placeholderTextColor={SLATE_400}
+                        value={specialMessage}
+                        onChangeText={setSpecialMessage}
+                        multiline
+                        maxLength={120}
+                      />
+                      <Text style={styles.messageCounter}>
+                        {specialMessage.length}/120
+                      </Text>
+                    </View>
+                  </View>
+                </ScrollView>
+
+                <View
+                  style={[
+                    styles.customizerFooter,
+                    { paddingBottom: Math.max(8, insets.bottom) },
+                  ]}
+                >
+                  <View style={styles.customizerFooterLeft}>
+                    <Text style={styles.customizerFooterLabel}>Total Price</Text>
+                    <Text style={styles.customizerFooterPrice}>
+                      {totalPrice.toFixed(2)} MAD
+                    </Text>
+                  </View>
+                  <Pressable style={styles.customizerAddBtn} onPress={handleAddCustomizedToCart}>
+                    <MaterialIcons name="shopping-bag" size={20} color="#fff" />
+                    <Text style={styles.customizerAddBtnText}>Add to Cart</Text>
+                  </Pressable>
+                </View>
+              </>
+            )}
+          </Animated.View>
+        </>
+      )}
     </View>
   );
 }
@@ -581,64 +937,166 @@ const styles = StyleSheet.create({
     color: SLATE_600,
     lineHeight: 22,
   },
+
+  // ─── Chef Card — modernized ───────────────────────────────────────────────
   chefCard: {
     marginTop: 32,
-    padding: 16,
-    borderRadius: 16,
+    borderRadius: 20,
     backgroundColor: SURFACE,
     borderWidth: 1,
-    borderColor: PRIMARY_TINT,
+    borderColor: BORDER_SUBTLE,
+    overflow: "hidden",
     ...Platform.select({
-      ios: { shadowColor: "#000", shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8 },
-      android: { elevation: 3 },
+      ios: {
+        shadowColor: "#000",
+        shadowOffset: { width: 0, height: 6 },
+        shadowOpacity: 0.08,
+        shadowRadius: 16,
+      },
+      android: { elevation: 5 },
     }),
+  },
+  // Subtle tinted gradient strip across the top of the card
+  chefCardAccent: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 56,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
   },
   chefCardRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingTop: 20,
+    paddingBottom: 16,
   },
-  chefMain: { flexDirection: "row", alignItems: "center", gap: 12, flex: 1 },
-  chefAvatarWrap: { position: "relative" },
-  chefAvatar: {
-    width: 56,
-    height: 56,
-    borderRadius: 28,
+  chefMain: { flexDirection: "row", alignItems: "center", gap: 14, flex: 1 },
+  // Outer ring around the avatar
+  chefAvatarRing: {
+    padding: 2,
+    borderRadius: 32,
     borderWidth: 2,
-    borderColor: PRIMARY_TINT,
+    borderColor: PRIMARY,
+  },
+  chefAvatarWrap: {},
+  chefAvatar: {
+    width: 52,
+    height: 52,
+    borderRadius: 26,
     backgroundColor: BORDER_SUBTLE,
   },
   chefAvatarPlaceholder: { alignItems: "center", justifyContent: "center" },
   chefInfo: { flex: 1, minWidth: 0 },
-  chefLabel: { fontSize: 12, color: SLATE_500 },
-  chefName: { fontSize: 16, fontWeight: "700", color: TEXT_PRIMARY, marginTop: 2 },
-  chefLocationRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 4 },
-  chefLocation: { fontSize: 12, color: SLATE_500 },
-  chatBtn: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    backgroundColor: PRIMARY_TINT,
-    alignItems: "center",
-    justifyContent: "center",
+  chefLabel: {
+    fontSize: 9,
+    fontWeight: "700",
+    color: SLATE_400,
+    letterSpacing: 1.5,
+    textTransform: "uppercase",
   },
-  chefCardFooter: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: BORDER_SUBTLE,
+  chefName: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: TEXT_PRIMARY,
+    marginTop: 2,
+    letterSpacing: 0.2,
+  },
+  chefLocationRow: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "space-between",
+    marginTop: 6,
+    gap: 8,
   },
-  creatorRatingRow: { flexDirection: "row", alignItems: "center", gap: 6 },
-  creatorRatingText: { fontSize: 12, fontWeight: "700", color: TEXT_PRIMARY },
+  chefLocationInner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    flex: 1,
+  },
+  chefLocation: { fontSize: 11, color: SLATE_500 },
+  chatBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 12,
+    backgroundColor: PRIMARY_TINT,
+    alignItems: "center",
+    justifyContent: "center",
+    marginLeft: 8,
+  },
+  // Thin separator
+  chefDivider: {
+    height: 1,
+    backgroundColor: BORDER_SUBTLE,
+    marginHorizontal: 16,
+  },
+  chefCardFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+  },
+  creatorRatingRow: { flexDirection: "row", alignItems: "center", gap: 8 },
+  // Pill badge for the star rating
+  ratingBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+    backgroundColor: STAR_YELLOW,
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 999,
+  },
+  ratingBadgeText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  creatorRatingText: {
+    fontSize: 12,
+    fontWeight: "500",
+    color: SLATE_500,
+  },
+  // Follow button — solid PRIMARY fill
+  chefFollowBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 999,
+    backgroundColor: PRIMARY,
+    gap: 4,
+  },
+  chefFollowBtnFollowing: {
+    backgroundColor: SLATE_400,
+  },
+  chefFollowText: {
+    fontSize: 11,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  chefFollowTextFollowing: {
+    color: "#fff",
+  },
+  // Portfolio link with trailing arrow
+  viewPortfolioBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 3,
+  },
   viewPortfolio: {
     fontSize: 12,
     fontWeight: "700",
     color: PRIMARY,
-    letterSpacing: 1,
+    letterSpacing: 0.5,
   },
+  // ─── End Chef Card ────────────────────────────────────────────────────────
+
   highlightsGrid: { flexDirection: "row", gap: 12, flexWrap: "wrap" },
   highlightItem: {
     flex: 1,
@@ -701,4 +1159,223 @@ const styles = StyleSheet.create({
     }),
   },
   orderBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  customizerOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(15, 23, 42, 0.35)",
+    zIndex: 30,
+  },
+  customizerSheet: {
+    position: "absolute",
+    left: 16,
+    right: 16,
+    bottom: 40,
+    borderRadius: 24,
+    backgroundColor: "#FFF8F6",
+    paddingTop: 8,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    zIndex: 40,
+  },
+  customizerHandle: {
+    alignSelf: "center",
+    width: 40,
+    height: 4,
+    borderRadius: 999,
+    backgroundColor: "rgba(148, 163, 184, 0.5)",
+    marginBottom: 12,
+  },
+  customizerHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingBottom: 8,
+  },
+  customizerTitle: {
+    fontSize: 20,
+    fontWeight: "700",
+    color: TEXT_PRIMARY,
+  },
+  customizerCloseBtn: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: "rgba(148,163,184,0.12)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  customizerScroll: {
+    maxHeight: 380,
+  },
+  customizerScrollContent: {
+    paddingBottom: 16,
+  },
+  choiceBody: {
+    paddingTop: 4,
+  },
+  choiceText: {
+    fontSize: 14,
+    color: SLATE_600,
+    marginBottom: 16,
+  },
+  choiceButtonsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    gap: 10,
+  },
+  choiceSecondaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    backgroundColor: "#fff",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choiceSecondaryText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: SLATE_600,
+  },
+  choicePrimaryBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  choicePrimaryText: {
+    fontSize: 14,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  customizerSection: {
+    marginTop: 16,
+  },
+  customizerSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 1.5,
+    color: PRIMARY,
+    marginBottom: 10,
+  },
+  customizerSectionHeaderRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    marginBottom: 10,
+  },
+  customizerSectionHint: {
+    fontSize: 11,
+    color: SLATE_500,
+  },
+  colorRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 12,
+  },
+  colorOuter: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: "rgba(148,163,184,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    backgroundColor: "#fff",
+  },
+  colorInner: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+  },
+  garnishRow: {
+    flexDirection: "row",
+    flexWrap: "wrap",
+    gap: 8,
+  },
+  garnishPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 999,
+    backgroundColor: "#fff",
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+  },
+  garnishPillActive: {
+    backgroundColor: `${PRIMARY}1A`,
+    borderColor: PRIMARY,
+  },
+  garnishText: {
+    marginLeft: 6,
+    fontSize: 13,
+    fontWeight: "500",
+    color: SLATE_600,
+  },
+  garnishTextActive: {
+    color: PRIMARY,
+  },
+  messageWrap: {
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    backgroundColor: "#fff",
+    padding: 12,
+    paddingBottom: 20,
+  },
+  messageInput: {
+    minHeight: 90,
+    maxHeight: 140,
+    fontSize: 13,
+    color: TEXT_PRIMARY,
+    textAlignVertical: "top",
+  },
+  messageCounter: {
+    position: "absolute",
+    right: 12,
+    bottom: 6,
+    fontSize: 10,
+    fontWeight: "500",
+    color: SLATE_400,
+  },
+  customizerFooter: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingTop: 12,
+    paddingBottom: 16,
+  },
+  customizerFooterLeft: {},
+  customizerFooterLabel: {
+    fontSize: 10,
+    fontWeight: "700",
+    textTransform: "uppercase",
+    letterSpacing: 1.2,
+    color: SLATE_500,
+  },
+  customizerFooterPrice: {
+    marginTop: 2,
+    fontSize: 18,
+    fontWeight: "700",
+    color: TEXT_PRIMARY,
+  },
+  customizerAddBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 14,
+    backgroundColor: PRIMARY,
+    gap: 8,
+  },
+  customizerAddBtnText: {
+    fontSize: 15,
+    fontWeight: "700",
+    color: "#fff",
+  },
 });

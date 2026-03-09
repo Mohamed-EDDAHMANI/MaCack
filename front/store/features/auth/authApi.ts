@@ -81,6 +81,7 @@ export interface GetProfileResponse {
   user: AuthUser;
   rating: ProfileRating;
   followersCount: number;
+  likesCount: number;
 }
 
 /**

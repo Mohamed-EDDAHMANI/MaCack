@@ -38,21 +38,6 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
-        name="search"
-        options={{
-          title: "Search",
-          href: isPatissiere ? null : undefined,
-          tabBarIcon: ({ color, focused }) => (
-            <AnimatedTabIcon
-              iconName="search"
-              title="Search"
-              focused={focused}
-              color={color}
-            />
-          ),
-        }}
-      />
-      <Tabs.Screen
         name="favorites"
         options={{
           title: "Likes",
@@ -60,6 +45,20 @@ export default function TabsLayout() {
             <AnimatedTabIcon
               iconName="favorite"
               title="Likes"
+              focused={focused}
+              color={color}
+            />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="cart"
+        options={{
+          title: "Cart",
+          tabBarIcon: ({ color, focused }) => (
+            <AnimatedTabIcon
+              iconName="shopping-cart"
+              title="Cart"
               focused={focused}
               color={color}
             />

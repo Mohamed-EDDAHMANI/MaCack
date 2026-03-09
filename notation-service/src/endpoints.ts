@@ -22,4 +22,9 @@ export const NOTATION_ENDPOINTS = [
     pattern: /^\/follower\/toggle\/post$/,
     roles: ['client', 'patissiere', 'livreur', 'admin', 'manager', 'super_admin'],
   },
+  // ── Profile like ── (client can like a patissier's profile)
+  {
+    pattern: /^\/profile-like\/toggle\/post$/,
+    roles: ['client', 'patissiere', 'livreur', 'admin', 'manager', 'super_admin'],
+  },
 ];

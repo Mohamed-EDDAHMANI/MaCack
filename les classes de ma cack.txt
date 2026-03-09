@@ -79,15 +79,21 @@ Class: Order
 - id
 - clientId
 - patissiereId
-- productId
 - status (pending | accepted | refused | preparing | delivering | delivered)
+- requestedDateTime
+- totalPrice
+- createdAt
+
+Class: OrderItem
+- id
+- orderId
+- productId
+- quantity
 - customizationDetails
     - colors
     - garniture
     - message
-    - dateTime
-- totalPrice
-- createdAt
+- price
 
 Class: OrderStatusHistory
 - id

@@ -208,27 +208,35 @@ services:
     ports:
       - "3005:3005"
 
-  # orders-service:
-  #   build:
-  #     context: ./orders-service
-  #     dockerfile: Dockerfile
-  #   container_name: orders-service-dev
-  #   command: sh -c "npx prisma generate && npm run start:dev"
-  #   volumes:
-  #     - ./orders-service:/app
-  #     - /app/node_modules
-  #   environment:
-  #     DATABASE_URL: mongodb://root:password@mongodb:27017/orders_db?authSource=admin
-  #     RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
-  #     REDIS_HOST: redis
-  #     REDIS_PORT: 6379
-  #     CHOKIDAR_USEPOLLING: "true"
-  #   depends_on:
-  #     - gateway
-  #   networks:
-  #     - macack-network
-  #   ports:
-  #     - "3004:3004"
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service-dev
+    command: npm run start:dev
+    volumes:
+      - ./order-service:/app
+      - /app/node_modules
+    environment:
+      MONGODB_URI: mongodb://root:password@mongodb:27017/orders_db?authSource=admin
+      RABBITMQ_URL: amqp://guest:guest@rabbitmq:5672
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+      TCP_PORT: 3004
+      PORT: 3004
+      HOST: order-service
+      CHOKIDAR_USEPOLLING: "true"
+    depends_on:
+      mongodb:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - macack-network
+    ports:
+      - "3004:3004"
 
 volumes:
   mongodb_data_dev:

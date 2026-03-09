@@ -95,7 +95,7 @@ export default function CreateProductScreen() {
 
   /* ─── guard (after all hooks) ─── */
   if (!isAuthenticated || user?.role !== "PATISSIERE") {
-    return <Redirect href="/(main)" />;
+    return <Redirect href="/" />;
   }
 
   /* ─── ingredients ─── */
