@@ -134,6 +134,11 @@ export function AppSidebar({ visible, onClose }: AppSidebarProps) {
 
   const commonItems: SidebarItem[] = [
     {
+      icon: "shopping-cart",
+      label: "Cart",
+      onPress: () => navigateAndClose(() => router.push("/(main)/(tabs)/cart" as any)),
+    },
+    {
       icon: "shopping-bag",
       label: "My Orders",
       onPress: () => navigateAndClose(() => router.push("/(main)/(tabs)/orders" as any)),

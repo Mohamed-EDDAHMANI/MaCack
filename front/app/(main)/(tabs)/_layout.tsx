@@ -55,6 +55,7 @@ export default function TabsLayout() {
         name="cart"
         options={{
           title: "Cart",
+          href: isPatissiere ? null : undefined,
           tabBarIcon: ({ color, focused }) => (
             <AnimatedTabIcon
               iconName="shopping-cart"

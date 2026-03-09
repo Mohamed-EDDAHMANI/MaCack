@@ -100,7 +100,7 @@ export default function ClientExploreScreen() {
 
   const openPopup = () => {
     if (!isAuthenticated) {
-      router.push("/(auth)/login");
+      showAuthModal();
       return;
     }
     setShowProfilePopup(true);

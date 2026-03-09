@@ -11,7 +11,6 @@ import {
   NativeScrollEvent,
   ScrollView,
   Dimensions,
-  TextInput,
 } from "react-native";
 import { SafeAreaView, useSafeAreaInsets } from "react-native-safe-area-context";
 import { Image } from "expo-image";
@@ -35,24 +34,32 @@ import { fetchProductById, toggleLike, clearSelectedProduct } from "@/store/feat
 import { toggleFollow } from "@/store/features/follow";
 import { addItem } from "@/store/features/cart/cartSlice";
 import { buildPhotoUrl } from "@/lib/utils";
+import OrderSuccessPopup from "@/components/product-detail/OrderSuccessPopup";
+import OrderCustomizerPopup from "@/components/product-detail/OrderCustomizerPopup";
 
 const HERO_HEIGHT = 400;
 const STAR_YELLOW = "#eab308";
 const { width: SCREEN_WIDTH } = Dimensions.get("window");
 
-const COLOR_OPTIONS = [
-  "#D81B60",
-  "#FFD700",
-  "#F4C2C2",
-  "#FFFFFF",
-  "#4A2C2A",
-  "#FF6B6B",
-  "#FF8C00",
-  "#8A2BE2",
-  "#00B894",
-  "#0984E3",
-  "#FF69B4",
-  "#A3CB38",
+type ColorOption = {
+  id: string;
+  label: string;
+  hex: string;
+};
+
+const COLOR_OPTIONS: ColorOption[] = [
+  { id: "strawberry-pink", label: "Strawberry Pink", hex: "#D81B60" },
+  { id: "gold", label: "Royal Gold", hex: "#FFD700" },
+  { id: "rose-blush", label: "Rose Blush", hex: "#F4C2C2" },
+  { id: "pure-white", label: "Pure White", hex: "#FFFFFF" },
+  { id: "chocolate-brown", label: "Chocolate Brown", hex: "#4A2C2A" },
+  { id: "coral", label: "Coral", hex: "#FF6B6B" },
+  { id: "sunset-orange", label: "Sunset Orange", hex: "#FF8C00" },
+  { id: "violet", label: "Velvet Violet", hex: "#8A2BE2" },
+  { id: "mint", label: "Mint Green", hex: "#00B894" },
+  { id: "ocean", label: "Ocean Blue", hex: "#0984E3" },
+  { id: "rose", label: "Rose Candy", hex: "#FF69B4" },
+  { id: "lime", label: "Fresh Lime", hex: "#A3CB38" },
 ];
 
 const GARNISH_OPTIONS = [
@@ -194,7 +201,9 @@ export default function ProductDetailScreen() {
   const [isCustomizerOpen, setIsCustomizerOpen] = useState(false);
   const [customizerStep, setCustomizerStep] = useState<"choice" | "full">("choice");
   const sheetAnim = useRef(new Animated.Value(0)).current;
-  const [selectedColor, setSelectedColor] = useState<string>(COLOR_OPTIONS[0]);
+  const successTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [showSuccess, setShowSuccess] = useState(false);
+  const [selectedColorId, setSelectedColorId] = useState<string>(COLOR_OPTIONS[0].id);
   const [selectedGarnishes, setSelectedGarnishes] = useState<string[]>([]);
   const [specialMessage, setSpecialMessage] = useState("");
 
@@ -221,6 +230,14 @@ export default function ProductDetailScreen() {
     [{ nativeEvent: { contentOffset: { y: scrollY } } }],
     { useNativeDriver: true, listener: onScrollNative }
   );
+
+  useEffect(() => {
+    return () => {
+      if (successTimeoutRef.current) {
+        clearTimeout(successTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // KEY TRICK: the hero block lives inside the vertical ScrollView (so vertical
   // swipes on it are caught by the outer scroll), but we counter-translate it
@@ -271,6 +288,17 @@ export default function ProductDetailScreen() {
 
   const firstImageUri = imageUris[0];
 
+  const showOrderSuccess = () => {
+    setShowSuccess(true);
+    if (successTimeoutRef.current) {
+      clearTimeout(successTimeoutRef.current);
+    }
+    successTimeoutRef.current = setTimeout(() => {
+      setShowSuccess(false);
+      successTimeoutRef.current = null;
+    }, 1600);
+  };
+
   const handleSkipCustomization = () => {
     dispatch(
       addItem({
@@ -285,6 +313,7 @@ export default function ProductDetailScreen() {
       })
     );
     closeCustomizer();
+    showOrderSuccess();
   };
 
   const handleAddCustomizedToCart = () => {
@@ -293,6 +322,9 @@ export default function ProductDetailScreen() {
       .filter(Boolean)
       .join(", ");
 
+    const selectedColorLabel =
+      COLOR_OPTIONS.find((c) => c.id === selectedColorId)?.label;
+
     dispatch(
       addItem({
         productId: String(product.id),
@@ -300,12 +332,13 @@ export default function ProductDetailScreen() {
         price: totalPrice,
         quantity: 1,
         imageUri: firstImageUri,
-        colors: selectedColor,
+        colors: selectedColorLabel || undefined,
         garnish: garnishLabel || undefined,
         message: specialMessage || undefined,
       })
     );
     closeCustomizer();
+    showOrderSuccess();
   };
 
   return (
@@ -616,180 +649,27 @@ export default function ProductDetailScreen() {
         </Pressable>
       </View>
 
-      {isCustomizerOpen && (
-        <>
-          <Animated.View
-            style={[
-              styles.customizerOverlay,
-              {
-                opacity: sheetAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0, 1],
-                }),
-              },
-            ]}
-          >
-            <Pressable style={StyleSheet.absoluteFill} onPress={closeCustomizer} />
-          </Animated.View>
+      <OrderCustomizerPopup
+        isOpen={isCustomizerOpen}
+        step={customizerStep}
+        sheetAnim={sheetAnim}
+        colorOptions={COLOR_OPTIONS}
+        garnishOptions={GARNISH_OPTIONS}
+        selectedColorId={selectedColorId}
+        selectedGarnishes={selectedGarnishes}
+        specialMessage={specialMessage}
+        totalPrice={totalPrice}
+        bottomInset={insets.bottom}
+        onClose={closeCustomizer}
+        onSkip={handleSkipCustomization}
+        onChooseCustomize={() => setCustomizerStep("full")}
+        onSelectColor={setSelectedColorId}
+        onToggleGarnish={toggleGarnish}
+        onChangeMessage={setSpecialMessage}
+        onAddToCart={handleAddCustomizedToCart}
+      />
 
-          <Animated.View
-            style={[
-              styles.customizerSheet,
-              {
-                transform: [
-                  {
-                    translateY: sheetAnim.interpolate({
-                      inputRange: [0, 1],
-                      outputRange: [400, 0],
-                    }),
-                  },
-                ],
-                opacity: sheetAnim.interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [0.6, 1],
-                }),
-              },
-            ]}
-          >
-            <View style={styles.customizerHandle} />
-            {customizerStep === "choice" ? (
-              <>
-                <View style={styles.customizerHeader}>
-                  <Text style={styles.customizerTitle}>Customize your order?</Text>
-                  <Pressable style={styles.customizerCloseBtn} onPress={closeCustomizer}>
-                    <MaterialIcons name="close" size={18} color={SLATE_600} />
-                  </Pressable>
-                </View>
-                <View style={styles.choiceBody}>
-                  <Text style={styles.choiceText}>
-                    Do you want to customize this order or skip this step?
-                  </Text>
-                  <View style={styles.choiceButtonsRow}>
-                    <Pressable style={styles.choiceSecondaryBtn} onPress={handleSkipCustomization}>
-                      <Text style={styles.choiceSecondaryText}>Skip this step</Text>
-                    </Pressable>
-                    <Pressable
-                      style={styles.choicePrimaryBtn}
-                      onPress={() => setCustomizerStep("full")}
-                    >
-                      <Text style={styles.choicePrimaryText}>Customize order</Text>
-                    </Pressable>
-                  </View>
-                </View>
-              </>
-            ) : (
-              <>
-                <View style={styles.customizerHeader}>
-                  <Text style={styles.customizerTitle}>Customize Your Order</Text>
-                  <Pressable style={styles.customizerCloseBtn} onPress={closeCustomizer}>
-                    <MaterialIcons name="close" size={18} color={SLATE_600} />
-                  </Pressable>
-                </View>
-
-                <ScrollView
-                  style={styles.customizerScroll}
-                  contentContainerStyle={styles.customizerScrollContent}
-                  showsVerticalScrollIndicator={false}
-                >
-                  <View style={styles.customizerSection}>
-                    <Text style={styles.customizerSectionLabel}>CHOOSE COLORS</Text>
-                    <View style={styles.colorRow}>
-                      {COLOR_OPTIONS.map((color) => {
-                        const active = color === selectedColor;
-                        return (
-                          <Pressable
-                            key={color}
-                            onPress={() => setSelectedColor(color)}
-                            style={[
-                              styles.colorOuter,
-                              active && { borderColor: PRIMARY, borderWidth: 2 },
-                            ]}
-                          >
-                            <View style={[styles.colorInner, { backgroundColor: color }]} />
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  <View style={styles.customizerSection}>
-                    <View style={styles.customizerSectionHeaderRow}>
-                      <Text style={styles.customizerSectionLabel}>GARNITURE</Text>
-                      <Text style={styles.customizerSectionHint}>Select up to 3</Text>
-                    </View>
-                    <View style={styles.garnishRow}>
-                      {GARNISH_OPTIONS.map((g) => {
-                        const active = selectedGarnishes.includes(g.id);
-                        return (
-                          <Pressable
-                            key={g.id}
-                            onPress={() => toggleGarnish(g.id)}
-                            style={[
-                              styles.garnishPill,
-                              active && styles.garnishPillActive,
-                            ]}
-                          >
-                            <MaterialIcons
-                              name={g.icon}
-                              size={18}
-                              color={PRIMARY}
-                              style={{ opacity: active ? 1 : 0.9 }}
-                            />
-                            <Text
-                              style={[
-                                styles.garnishText,
-                                active && styles.garnishTextActive,
-                              ]}
-                            >
-                              {g.label}
-                            </Text>
-                          </Pressable>
-                        );
-                      })}
-                    </View>
-                  </View>
-
-                  <View style={styles.customizerSection}>
-                    <Text style={styles.customizerSectionLabel}>ADD A SPECIAL MESSAGE</Text>
-                    <View style={styles.messageWrap}>
-                      <TextInput
-                        style={styles.messageInput}
-                        placeholder="Example: Happy Anniversary Sarah! ❤️"
-                        placeholderTextColor={SLATE_400}
-                        value={specialMessage}
-                        onChangeText={setSpecialMessage}
-                        multiline
-                        maxLength={120}
-                      />
-                      <Text style={styles.messageCounter}>
-                        {specialMessage.length}/120
-                      </Text>
-                    </View>
-                  </View>
-                </ScrollView>
-
-                <View
-                  style={[
-                    styles.customizerFooter,
-                    { paddingBottom: Math.max(8, insets.bottom) },
-                  ]}
-                >
-                  <View style={styles.customizerFooterLeft}>
-                    <Text style={styles.customizerFooterLabel}>Total Price</Text>
-                    <Text style={styles.customizerFooterPrice}>
-                      {totalPrice.toFixed(2)} MAD
-                    </Text>
-                  </View>
-                  <Pressable style={styles.customizerAddBtn} onPress={handleAddCustomizedToCart}>
-                    <MaterialIcons name="shopping-bag" size={20} color="#fff" />
-                    <Text style={styles.customizerAddBtnText}>Add to Cart</Text>
-                  </Pressable>
-                </View>
-              </>
-            )}
-          </Animated.View>
-        </>
-      )}
+      <OrderSuccessPopup visible={showSuccess} message="Order added successfully" />
     </View>
   );
 }
@@ -1159,223 +1039,4 @@ const styles = StyleSheet.create({
     }),
   },
   orderBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
-  customizerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(15, 23, 42, 0.35)",
-    zIndex: 30,
-  },
-  customizerSheet: {
-    position: "absolute",
-    left: 16,
-    right: 16,
-    bottom: 40,
-    borderRadius: 24,
-    backgroundColor: "#FFF8F6",
-    paddingTop: 8,
-    paddingHorizontal: 20,
-    paddingBottom: 20,
-    zIndex: 40,
-  },
-  customizerHandle: {
-    alignSelf: "center",
-    width: 40,
-    height: 4,
-    borderRadius: 999,
-    backgroundColor: "rgba(148, 163, 184, 0.5)",
-    marginBottom: 12,
-  },
-  customizerHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingBottom: 8,
-  },
-  customizerTitle: {
-    fontSize: 20,
-    fontWeight: "700",
-    color: TEXT_PRIMARY,
-  },
-  customizerCloseBtn: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "rgba(148,163,184,0.12)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  customizerScroll: {
-    maxHeight: 380,
-  },
-  customizerScrollContent: {
-    paddingBottom: 16,
-  },
-  choiceBody: {
-    paddingTop: 4,
-  },
-  choiceText: {
-    fontSize: 14,
-    color: SLATE_600,
-    marginBottom: 16,
-  },
-  choiceButtonsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    gap: 10,
-  },
-  choiceSecondaryBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-    backgroundColor: "#fff",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  choiceSecondaryText: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: SLATE_600,
-  },
-  choicePrimaryBtn: {
-    flex: 1,
-    paddingVertical: 12,
-    borderRadius: 12,
-    backgroundColor: PRIMARY,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  choicePrimaryText: {
-    fontSize: 14,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  customizerSection: {
-    marginTop: 16,
-  },
-  customizerSectionLabel: {
-    fontSize: 11,
-    fontWeight: "700",
-    letterSpacing: 1.5,
-    color: PRIMARY,
-    marginBottom: 10,
-  },
-  customizerSectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    marginBottom: 10,
-  },
-  customizerSectionHint: {
-    fontSize: 11,
-    color: SLATE_500,
-  },
-  colorRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 12,
-  },
-  colorOuter: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: "rgba(148,163,184,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#fff",
-  },
-  colorInner: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
-  },
-  garnishRow: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 8,
-  },
-  garnishPill: {
-    flexDirection: "row",
-    alignItems: "center",
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 999,
-    backgroundColor: "#fff",
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-  },
-  garnishPillActive: {
-    backgroundColor: `${PRIMARY}1A`,
-    borderColor: PRIMARY,
-  },
-  garnishText: {
-    marginLeft: 6,
-    fontSize: 13,
-    fontWeight: "500",
-    color: SLATE_600,
-  },
-  garnishTextActive: {
-    color: PRIMARY,
-  },
-  messageWrap: {
-    borderRadius: 16,
-    borderWidth: 1,
-    borderColor: BORDER_SUBTLE,
-    backgroundColor: "#fff",
-    padding: 12,
-    paddingBottom: 20,
-  },
-  messageInput: {
-    minHeight: 90,
-    maxHeight: 140,
-    fontSize: 13,
-    color: TEXT_PRIMARY,
-    textAlignVertical: "top",
-  },
-  messageCounter: {
-    position: "absolute",
-    right: 12,
-    bottom: 6,
-    fontSize: 10,
-    fontWeight: "500",
-    color: SLATE_400,
-  },
-  customizerFooter: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingTop: 12,
-    paddingBottom: 16,
-  },
-  customizerFooterLeft: {},
-  customizerFooterLabel: {
-    fontSize: 10,
-    fontWeight: "700",
-    textTransform: "uppercase",
-    letterSpacing: 1.2,
-    color: SLATE_500,
-  },
-  customizerFooterPrice: {
-    marginTop: 2,
-    fontSize: 18,
-    fontWeight: "700",
-    color: TEXT_PRIMARY,
-  },
-  customizerAddBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 14,
-    backgroundColor: PRIMARY,
-    gap: 8,
-  },
-  customizerAddBtnText: {
-    fontSize: 15,
-    fontWeight: "700",
-    color: "#fff",
-  },
 });

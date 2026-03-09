@@ -79,10 +79,19 @@ Class: Order
 - id
 - clientId
 - patissiereId
+- patissiereAddress (pickup address of patissiere)
+- deliveryAddress (final address selected by client)
+- deliveryAddressSource (profile | current_location)
 - status (pending | accepted | refused | preparing | delivering | delivered)
 - requestedDateTime
 - totalPrice
 - createdAt
+
+Checkout rule (CLIENT):
+- Before "Proceed the order", deliveryAddress is required.
+- Client must choose one option in address popup:
+  1) Use your profile address
+  2) Use current location (phone GPS)
 
 Class: OrderItem
 - id
@@ -130,7 +139,9 @@ Class: Payment
 - orderId
 - clientId
 - amount
-- paymentMethod (card | wallet)
+- paymentMethod (stripe_card | wallet)  // indicate source
+- stripePaymentIntentId        // Stripe PaymentIntent ID
+- stripeCustomerId            // Stripe Customer ID (if saved card)
 - status (blocked | released | refunded)
 - createdAt
 
@@ -140,6 +151,7 @@ Class: Transaction
 - type (earning | commission | withdrawal)
 - amount
 - relatedOrderId
+- stripeChargeId?           // optional, reference to Stripe charge
 - createdAt
 
 Class: Commission
@@ -152,6 +164,7 @@ Class: Withdrawal
 - userId
 - amount
 - status (pending | approved | rejected)
+- stripePayoutId?           // optional, reference to Stripe payout
 - requestedAt
 
 ========================
