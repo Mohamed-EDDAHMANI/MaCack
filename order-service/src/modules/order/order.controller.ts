@@ -107,6 +107,20 @@ export class OrderController {
     return this.orderService.findOne(id, payload?.user?.sub ?? '', payload?.user?.role ?? '');
   }
 
+  @MessagePattern('order/delivered-by-client')
+  markDeliveredByClient(@Payload() payload: { params: { id: string }; user?: { sub?: string } }) {
+    const id = payload?.params?.id ?? '';
+    const clientId = payload?.user?.sub ?? '';
+    return this.orderService.markDeliveredByClient(id, clientId);
+  }
+
+  @MessagePattern('order/start-delivery')
+  startDelivery(@Payload() payload: { params: { id: string }; user?: { sub?: string } }) {
+    const id = payload?.params?.id ?? '';
+    const clientId = payload?.user?.sub ?? '';
+    return this.orderService.startDelivery(id, clientId);
+  }
+
   @MessagePattern(ORDERS_PATTERNS.ORDER_REMOVE)
   remove(@Payload()  payload: { params: { id: string } }) {
     const id = payload.params.id;

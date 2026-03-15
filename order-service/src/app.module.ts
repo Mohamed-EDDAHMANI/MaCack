@@ -8,6 +8,7 @@ import { winstonConfig } from './common/logger/logger.config';
 import { AllExceptionsFilter } from './common/exceptions';
 import { OrderModule } from './modules/order/order.module';
 import { OrderItemModule } from './modules/order-item/order-item.module';
+import { EstimationModule } from './modules/estimation/estimation.module';
 import { RedisModule } from './modules/redis/redis.module';
 import { MongoDbModule } from './infrastructure/database/mongodb.module';
 
@@ -19,6 +20,7 @@ import { MongoDbModule } from './infrastructure/database/mongodb.module';
     RedisModule, // Important: keep this
     OrderModule,
     OrderItemModule,
+    EstimationModule,
   ],
   controllers: [AppController],
   providers: [

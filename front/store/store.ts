@@ -16,6 +16,7 @@ import { catalogReducer } from "./features/catalog";
 import { followReducer } from "./features/follow";
 import { profileLikeReducer } from "./features/profileLike";
 import { cartReducer } from "./features/cart/cartSlice";
+import { estimationReducer } from "./features/estimation";
 
 const persistConfig = {
   key: "root",
@@ -29,6 +30,7 @@ const appReducer = combineReducers({
   follow: followReducer,
   profileLike: profileLikeReducer,
   cart: cartReducer,
+  estimation: estimationReducer,
 });
 
 const rootReducer = (

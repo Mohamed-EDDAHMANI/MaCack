@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import {
   View,
   Text,
@@ -12,7 +12,7 @@ import {
   Platform,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { useRouter } from "expo-router";
+import { useRouter, useLocalSearchParams } from "expo-router";
 import { Redirect } from "expo-router";
 import { WebView } from "react-native-webview";
 import { MaterialIcons } from "@expo/vector-icons";
@@ -28,7 +28,7 @@ import {
   SURFACE,
   BORDER,
 } from "@/constants/colors";
-import { buildWorkspaceMapHtml, OSM_DEFAULT } from "@/lib/workspace-map-html";
+import { buildWorkspaceMapHtml, OSM_DEFAULT, type MapMarker } from "@/lib/workspace-map-html";
 import { buildPhotoUrl } from "@/lib/utils";
 import { Gesture, GestureDetector, GestureHandlerRootView } from "react-native-gesture-handler";
 import Animated, {
@@ -39,43 +39,40 @@ import Animated, {
   runOnJS,
   interpolate,
 } from "react-native-reanimated";
+import {
+  getAvailableEstimationsForDeliveryApi,
+  getAcceptedEstimationsForDeliveryApi,
+  getEstimatedEstimationsForDeliveryApi,
+  confirmEstimationApi,
+  type AvailableEstimationForDelivery,
+} from "@/store/features/estimation";
+import { getProfileById } from "@/store/features/auth/authApi";
+import { getOrderSocket } from "@/lib/order-socket";
+import { fetchProductByIdApi } from "@/store/features/catalog/catalogApi";
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get("window");
 
 type TabKey = "Available" | "Accepted" | "Estimated";
 
-const MOCK_ORDERS = [
-  {
-    id: "1",
-    clientName: "Amélie Laurent",
-    rating: "4.9",
-    tag: "Premium Member",
-    price: "€12.50",
-    distance: "2.4 km away",
-    items: "6x Strawberry Macarons, 1x Croissant",
-    highlighted: true,
-  },
-  {
-    id: "2",
-    clientName: "Julien Bernard",
-    rating: "4.7",
-    tag: "Regular",
-    price: "€8.90",
-    distance: "1.1 km away",
-    items: "2x Pain au Chocolat",
-    highlighted: false,
-  },
-  {
-    id: "3",
-    clientName: "Sophie Morel",
-    rating: "5.0",
-    tag: "Favorite",
-    price: "€15.20",
-    distance: "4.8 km away",
-    items: "",
-    highlighted: false,
-  },
-];
+/** Rough distance in km (haversine approximation) */
+function distanceKm(
+  lat1: number,
+  lng1: number,
+  lat2: number,
+  lng2: number
+): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos((lat1 * Math.PI) / 180) *
+      Math.cos((lat2 * Math.PI) / 180) *
+      Math.sin(dLng / 2) *
+      Math.sin(dLng / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return R * c;
+}
 
 const TAB_ICONS: Record<TabKey, keyof typeof MaterialIcons.glyphMap> = {
   Available: "inbox",
@@ -86,20 +83,40 @@ const TAB_ICONS: Record<TabKey, keyof typeof MaterialIcons.glyphMap> = {
 const COLLAPSED_HEIGHT = 100;
 const SPRING_CONFIG = { damping: 20, stiffness: 200 };
 
-type OrderItem = (typeof MOCK_ORDERS)[number];
+export type WorkspaceOrderItem = {
+  id: string;
+  estimationId?: string;
+  clientName: string;
+  clientPhoto: string | null;
+  rating: string;
+  tag: string;
+  patissiereName: string;
+  price: string;
+  distance: string;
+  items: string;
+  highlighted: boolean;
+};
 
 function BottomOrdersSheet({
   headerTop,
   activeTab,
   setActiveTab,
   orders,
-  onViewOrderDetails,
+  selectedOrderIdForMap,
+  onCardPressForMap,
+  onViewOrder,
+  onConfirmOrder,
+  loading,
 }: {
   headerTop: number;
   activeTab: TabKey;
   setActiveTab: (t: TabKey) => void;
-  orders: OrderItem[];
-  onViewOrderDetails?: (orderId: string) => void;
+  orders: WorkspaceOrderItem[];
+  selectedOrderIdForMap: string | null;
+  onCardPressForMap?: (orderId: string) => void;
+  onViewOrder?: (orderId: string) => void;
+  onConfirmOrder?: (orderId: string, estimationId?: string) => void;
+  loading?: boolean;
 }) {
   const searchBarBottom = headerTop + 56 + 48 + 16;
   const halfHeight = SCREEN_HEIGHT * 0.45;
@@ -170,38 +187,76 @@ function BottomOrdersSheet({
           contentContainerStyle={styles.ordersScrollContent}
           showsVerticalScrollIndicator={false}
         >
-          {orders.map((order) => (
-            <View
-              key={order.id}
-              style={[styles.orderCard, order.highlighted && styles.orderCardHighlight]}
-            >
-              <View style={styles.orderRow}>
-                <View style={styles.orderLeft}>
-                  <View style={styles.orderAvatar} />
-                  <View>
-                    <Text style={styles.orderName}>{order.clientName}</Text>
-                    <View style={styles.orderMeta}>
-                      <MaterialIcons name="star" size={12} color={PRIMARY} />
-                      <Text style={styles.orderMetaText}>
-                        {order.rating} • {order.tag}
-                      </Text>
+          {loading ? (
+            <View style={styles.ordersLoading}>
+              <ActivityIndicator size="small" color={PRIMARY} />
+              <Text style={styles.ordersLoadingText}>Loading available requests...</Text>
+            </View>
+          ) : (
+            orders.map((order) => (
+              <Pressable
+                key={order.id}
+                style={[
+                  styles.orderCard,
+                  order.highlighted && styles.orderCardHighlight,
+                  selectedOrderIdForMap === order.id && styles.orderCardHighlight,
+                ]}
+                onPress={() => onCardPressForMap?.(order.id)}
+              >
+                <View style={styles.orderRow}>
+                  <View style={styles.orderLeft}>
+                    {order.clientPhoto ? (
+                      <Image source={{ uri: buildPhotoUrl(order.clientPhoto)! }} style={styles.orderAvatar} />
+                    ) : (
+                      <View style={[styles.orderAvatar, styles.orderAvatarPlaceholder]}>
+                        <MaterialIcons name="person" size={20} color={PRIMARY} />
+                      </View>
+                    )}
+                    <View>
+                      <Text style={styles.orderName}>{order.clientName}</Text>
+                      <View style={styles.orderMeta}>
+                        <MaterialIcons name="star" size={12} color={PRIMARY} />
+                        <Text style={styles.orderMetaText}>
+                          {order.rating} • {order.tag}
+                        </Text>
+                      </View>
+                      {order.patissiereName ? (
+                        <Text style={styles.patissiereFrom} numberOfLines={1}>
+                          From: {order.patissiereName}
+                        </Text>
+                      ) : null}
                     </View>
                   </View>
+                  <View style={styles.orderRight}>
+                    <Text style={styles.orderPrice}>{order.price}</Text>
+                    <Text style={styles.orderDistance}>{order.distance}</Text>
+                  </View>
                 </View>
-                <View style={styles.orderRight}>
-                  <Text style={styles.orderPrice}>{order.price}</Text>
-                  <Text style={styles.orderDistance}>{order.distance}</Text>
+                <View style={styles.cardActionsRow}>
+                  <Pressable
+                    style={styles.viewDetailsBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onViewOrder?.(order.id);
+                    }}
+                  >
+                    <Text style={styles.viewDetailsBtnText}>View order</Text>
+                    <MaterialIcons name="chevron-right" size={18} color={PRIMARY} />
+                  </Pressable>
+                  <Pressable
+                    style={styles.confirmOrderCardBtn}
+                    onPress={(e) => {
+                      e.stopPropagation();
+                      onConfirmOrder?.(order.id, order.estimationId);
+                    }}
+                  >
+                    <MaterialIcons name="check-circle" size={16} color="#fff" />
+                    <Text style={styles.confirmOrderCardBtnText}>Confirm order</Text>
+                  </Pressable>
                 </View>
-              </View>
-              <Pressable
-                style={styles.viewDetailsBtn}
-                onPress={() => onViewOrderDetails?.(order.id)}
-              >
-                <Text style={styles.viewDetailsBtnText}>View order details</Text>
-                <MaterialIcons name="chevron-right" size={18} color={PRIMARY} />
               </Pressable>
-            </View>
-          ))}
+            ))
+          )}
         </ScrollView>
       </Animated.View>
     </GestureDetector>
@@ -213,6 +268,7 @@ function BottomOrdersSheet({
  */
 export default function WorkspaceScreen() {
   const router = useRouter();
+  const params = useLocalSearchParams<{ activeOrderId?: string }>();
   const user = useAppSelector((state) => state.auth.user);
   const isAuthenticated = useAppSelector((state) => state.auth.isAuthenticated);
   const role = useAppSelector((state) => state.auth.user?.role);
@@ -225,9 +281,320 @@ export default function WorkspaceScreen() {
   const [activeTab, setActiveTab] = useState<TabKey>("Available");
   const [searchQuery, setSearchQuery] = useState("");
   const [isFullScreen, setIsFullScreen] = useState(false);
+  const [availableList, setAvailableList] = useState<AvailableEstimationForDelivery[]>([]);
+  const [acceptedList, setAcceptedList] = useState<AvailableEstimationForDelivery[]>([]);
+  const [estimatedList, setEstimatedList] = useState<AvailableEstimationForDelivery[]>([]);
+  const [profiles, setProfiles] = useState<Record<string, { name: string; photo: string | null; city: string | null; latitude: number | null; longitude: number | null; rating: string }>>({});
+  const [productTitles, setProductTitles] = useState<Record<string, string>>({});
+  const [availableLoading, setAvailableLoading] = useState(true);
+  const [acceptedLoading, setAcceptedLoading] = useState(true);
+  const [estimatedLoading, setEstimatedLoading] = useState(true);
+  const [selectedOrderIdForMap, setSelectedOrderIdForMap] = useState<string | null>(null);
   const fullscreenProgress = useSharedValue(0);
   const insets = useSafeAreaInsets();
   const headerTop = insets.top + (Platform.OS === "ios" ? 8 : 12);
+
+  useEffect(() => {
+    const activeId = typeof params.activeOrderId === "string" ? params.activeOrderId : params.activeOrderId?.[0];
+    if (activeId) setSelectedOrderIdForMap(activeId);
+  }, [params.activeOrderId]);
+
+  const loadAvailable = useCallback(async () => {
+    try {
+      setAvailableLoading(true);
+      const data = await getAvailableEstimationsForDeliveryApi();
+      setAvailableList(data);
+
+      const userIds = new Set<string>();
+      const productIds = new Set<string>();
+      data.forEach(({ order }) => {
+        userIds.add(order.clientId);
+        userIds.add(order.patissiereId);
+        order.items.forEach((i) => i.productId && productIds.add(i.productId));
+      });
+
+      const [profilesRes, productRes] = await Promise.all([
+        Promise.all(
+          Array.from(userIds).map(async (userId) => {
+            try {
+              const res = await getProfileById(userId);
+              const u = res?.data?.user;
+              const rating = res?.data?.rating?.average != null ? res.data.rating.average.toFixed(1) : "—";
+              if (u) {
+                return [
+                  userId,
+                  {
+                    name: u.name ?? "—",
+                    photo: u.photo ?? null,
+                    city: u.city ?? null,
+                    latitude: u.latitude ?? null,
+                    longitude: u.longitude ?? null,
+                    rating,
+                  },
+                ] as const;
+              }
+            } catch {
+              //
+            }
+            return [
+              userId,
+              { name: "—", photo: null, city: null, latitude: null, longitude: null, rating: "—" },
+            ] as const;
+          })
+        ),
+        Promise.all(
+          Array.from(productIds).map(async (productId) => {
+            try {
+              const p = await fetchProductByIdApi(productId);
+              return [productId, p?.title ?? productId.slice(-6)] as const;
+            } catch {
+              return [productId, productId.slice(-6)] as const;
+            }
+          })
+        ),
+      ]);
+
+      const nextProfiles: typeof profiles = {};
+      profilesRes.forEach(([id, pr]) => {
+        nextProfiles[id] = pr;
+      });
+      setProfiles((p) => ({ ...p, ...nextProfiles }));
+
+      const nextTitles: Record<string, string> = {};
+      productRes.forEach(([id, title]) => {
+        nextTitles[id] = title;
+      });
+      setProductTitles((t) => ({ ...t, ...nextTitles }));
+    } catch {
+      setAvailableList([]);
+    } finally {
+      setAvailableLoading(false);
+    }
+  }, []);
+
+  const loadAccepted = useCallback(async () => {
+    try {
+      setAcceptedLoading(true);
+      const data = await getAcceptedEstimationsForDeliveryApi();
+      setAcceptedList(data);
+      const userIds = new Set<string>();
+      const productIds = new Set<string>();
+      data.forEach(({ order }) => {
+        userIds.add(order.clientId);
+        userIds.add(order.patissiereId);
+        order.items.forEach((i) => i.productId && productIds.add(i.productId));
+      });
+      const profilesRes = await Promise.all(
+        Array.from(userIds).map(async (userId) => {
+          try {
+            const res = await getProfileById(userId);
+            const u = res?.data?.user;
+            const rating = res?.data?.rating?.average != null ? res.data.rating.average.toFixed(1) : "—";
+            if (u) return [userId, { name: u.name ?? "—", photo: u.photo ?? null, city: u.city ?? null, latitude: u.latitude ?? null, longitude: u.longitude ?? null, rating }] as const;
+          } catch {
+            // ignore
+          }
+          return [userId, { name: "—", photo: null, city: null, latitude: null, longitude: null, rating: "—" }] as const;
+        })
+      );
+      const productRes = await Promise.all(
+        Array.from(productIds).map(async (productId) => {
+          try {
+            const p = await fetchProductByIdApi(productId);
+            return [productId, p?.title ?? productId.slice(-6)] as const;
+          } catch {
+            return [productId, productId.slice(-6)] as const;
+          }
+        })
+      );
+      const nextProfiles: Record<string, { name: string; photo: string | null; city: string | null; latitude: number | null; longitude: number | null; rating: string }> = {};
+      profilesRes.forEach(([id, pr]) => { nextProfiles[id] = pr; });
+      setProfiles((p) => ({ ...p, ...nextProfiles }));
+      const nextTitles: Record<string, string> = {};
+      productRes.forEach(([id, title]) => { nextTitles[id] = title; });
+      setProductTitles((t) => ({ ...t, ...nextTitles }));
+    } catch {
+      setAcceptedList([]);
+    } finally {
+      setAcceptedLoading(false);
+    }
+  }, []);
+
+  const loadEstimated = useCallback(async () => {
+    try {
+      setEstimatedLoading(true);
+      const data = await getEstimatedEstimationsForDeliveryApi();
+      setEstimatedList(data);
+      const userIds = new Set<string>();
+      const productIds = new Set<string>();
+      data.forEach(({ order }) => {
+        userIds.add(order.clientId);
+        userIds.add(order.patissiereId);
+        order.items.forEach((i) => i.productId && productIds.add(i.productId));
+      });
+      const profilesRes = await Promise.all(
+        Array.from(userIds).map(async (userId) => {
+          try {
+            const res = await getProfileById(userId);
+            const u = res?.data?.user;
+            const rating = res?.data?.rating?.average != null ? res.data.rating.average.toFixed(1) : "—";
+            if (u) return [userId, { name: u.name ?? "—", photo: u.photo ?? null, city: u.city ?? null, latitude: u.latitude ?? null, longitude: u.longitude ?? null, rating }] as const;
+          } catch {
+            // ignore
+          }
+          return [userId, { name: "—", photo: null, city: null, latitude: null, longitude: null, rating: "—" }] as const;
+        })
+      );
+      const productRes = await Promise.all(
+        Array.from(productIds).map(async (productId) => {
+          try {
+            const p = await fetchProductByIdApi(productId);
+            return [productId, p?.title ?? productId.slice(-6)] as const;
+          } catch {
+            return [productId, productId.slice(-6)] as const;
+          }
+        })
+      );
+      const nextProfiles: Record<string, { name: string; photo: string | null; city: string | null; latitude: number | null; longitude: number | null; rating: string }> = {};
+      profilesRes.forEach(([id, pr]) => { nextProfiles[id] = pr; });
+      setProfiles((p) => ({ ...p, ...nextProfiles }));
+      const nextTitles: Record<string, string> = {};
+      productRes.forEach(([id, title]) => { nextTitles[id] = title; });
+      setProductTitles((t) => ({ ...t, ...nextTitles }));
+    } catch {
+      setEstimatedList([]);
+    } finally {
+      setEstimatedLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    loadAvailable();
+  }, [loadAvailable]);
+
+  useEffect(() => {
+    loadAccepted();
+  }, [loadAccepted]);
+
+  useEffect(() => {
+    loadEstimated();
+  }, [loadEstimated]);
+
+  useEffect(() => {
+    const socket = getOrderSocket();
+    const handler = () => {
+      loadAvailable();
+      loadAccepted();
+      loadEstimated();
+    };
+    socket.on("estimation.created", handler);
+    return () => {
+      socket.off("estimation.created", handler);
+    };
+  }, [loadAvailable, loadAccepted, loadEstimated]);
+
+  const userLat = userLocation?.lat ?? OSM_DEFAULT.lat;
+  const userLng = userLocation?.lng ?? OSM_DEFAULT.lng;
+  const mapMarkers = useMemo((): MapMarker[] => {
+    if (!selectedOrderIdForMap) return [];
+    const entry =
+      availableList.find(({ order }) => order.id === selectedOrderIdForMap) ??
+      acceptedList.find(({ order }) => order.id === selectedOrderIdForMap) ??
+      estimatedList.find(({ order }) => order.id === selectedOrderIdForMap);
+    if (!entry) return [];
+    const { order } = entry;
+    const out: MapMarker[] = [];
+    if (order.deliveryLatitude != null && order.deliveryLongitude != null) {
+      out.push({
+        lat: order.deliveryLatitude,
+        lng: order.deliveryLongitude,
+        label: "Delivery",
+      });
+    }
+    const pat = profiles[order.patissiereId];
+    if (pat?.latitude != null && pat?.longitude != null) {
+      out.push({
+        lat: pat.latitude,
+        lng: pat.longitude,
+        label: "Pickup",
+      });
+    }
+    return out;
+  }, [availableList, acceptedList, estimatedList, profiles, selectedOrderIdForMap]);
+
+  const handleCardPressForMap = useCallback((orderId: string) => {
+    setSelectedOrderIdForMap((prev) => (prev === orderId ? null : orderId));
+  }, []);
+
+  const handleConfirmOrder = useCallback(
+    async (orderId: string, estimationId?: string) => {
+      if (estimationId) {
+        try {
+          await confirmEstimationApi(estimationId);
+          loadAvailable();
+          loadAccepted();
+          loadEstimated();
+        } catch {
+          // show error optionally
+        }
+      } else {
+        router.push(`/(main)/delivery-order/${orderId}` as any);
+      }
+    },
+    [router, loadAvailable, loadAccepted, loadEstimated]
+  );
+
+  const buildOrderItem = useCallback(
+    (
+      { estimation, order }: AvailableEstimationForDelivery,
+      options: { estimationId?: string }
+    ): WorkspaceOrderItem => {
+      const client = profiles[order.clientId];
+      const patissiere = profiles[order.patissiereId];
+      const dist =
+        userLocation && order.deliveryLatitude != null && order.deliveryLongitude != null
+          ? distanceKm(
+              userLocation.lat,
+              userLocation.lng,
+              order.deliveryLatitude,
+              order.deliveryLongitude
+            ).toFixed(1) + " km away"
+          : "—";
+      const itemsStr =
+        order.items
+          .map((i) => `${i.quantity}x ${productTitles[i.productId] ?? i.productId?.slice(-6) ?? "Item"}`)
+          .join(", ") || "—";
+      return {
+        id: order.id,
+        estimationId: options.estimationId ?? estimation.id,
+        clientName: client?.name ?? "Client",
+        clientPhoto: client?.photo ?? null,
+        rating: client?.rating ?? "—",
+        tag: client?.city ?? "",
+        patissiereName: patissiere?.name ?? "Patissiere",
+        price: "€" + estimation.price.toFixed(2),
+        distance: dist,
+        items: itemsStr,
+        highlighted: false,
+      };
+    },
+    [profiles, userLocation, productTitles]
+  );
+
+  const availableOrders: WorkspaceOrderItem[] = useMemo(
+    () => availableList.map((entry) => buildOrderItem(entry, {})),
+    [availableList, buildOrderItem]
+  );
+
+  const acceptedOrders: WorkspaceOrderItem[] = useMemo(
+    () => acceptedList.map((entry) => buildOrderItem(entry, { estimationId: entry.estimation.id })),
+    [acceptedList, buildOrderItem]
+  );
+
+  const estimatedOrders: WorkspaceOrderItem[] = useMemo(
+    () => estimatedList.map((entry) => buildOrderItem(entry, { estimationId: entry.estimation.id })),
+    [estimatedList, buildOrderItem]
+  );
 
   const enterFullscreen = () => {
     fullscreenProgress.value = withTiming(
@@ -283,12 +650,10 @@ export default function WorkspaceScreen() {
     return <Redirect href="/(auth)/login" />;
   }
   if (role !== "LIVREUR") {
-    return <Redirect href="/(main)" />;
+    return <Redirect href={"/(main)" as import("expo-router").Href} />;
   }
 
-  const lat = userLocation?.lat ?? OSM_DEFAULT.lat;
-  const lng = userLocation?.lng ?? OSM_DEFAULT.lng;
-  const mapHtml = buildWorkspaceMapHtml(lat, lng);
+  const mapHtml = buildWorkspaceMapHtml(userLat, userLng, mapMarkers);
   const profilePhoto = buildPhotoUrl(user?.photo ?? null);
 
   return (
@@ -327,9 +692,7 @@ export default function WorkspaceScreen() {
             )}
           </View>
           <Text style={styles.headerTitle}>Driver Workspace</Text>
-          <Pressable style={styles.iconBtn} onPress={enterFullscreen}>
-            <MaterialIcons name="fullscreen" size={22} color={PRIMARY} />
-          </Pressable>
+          <View style={styles.iconBtnSpacer} />
         </View>
 
         <View style={[styles.searchWrap, { top: headerTop + 56 }]}>
@@ -361,8 +724,22 @@ export default function WorkspaceScreen() {
           headerTop={headerTop}
           activeTab={activeTab}
           setActiveTab={setActiveTab}
-          orders={MOCK_ORDERS}
-          onViewOrderDetails={(id) => router.push(`/(main)/delivery-order/${id}` as any)}
+          orders={
+            activeTab === "Available"
+              ? availableOrders
+              : activeTab === "Accepted"
+                ? acceptedOrders
+                : estimatedOrders
+          }
+          selectedOrderIdForMap={selectedOrderIdForMap}
+          onCardPressForMap={handleCardPressForMap}
+          onViewOrder={(id) => router.push(`/(main)/delivery-order/${id}` as any)}
+          onConfirmOrder={handleConfirmOrder}
+          loading={
+            (activeTab === "Available" && availableLoading) ||
+            (activeTab === "Accepted" && acceptedLoading) ||
+            (activeTab === "Estimated" && estimatedLoading)
+          }
         />
 
         <Pressable style={[styles.backBtn, { top: headerTop + 4 }]} onPress={() => router.back()}>
@@ -370,10 +747,10 @@ export default function WorkspaceScreen() {
         </Pressable>
       </Animated.View>
 
-      {/* Fullscreen overlay: fades in when entering fullscreen */}
+      {/* Fullscreen overlay: fades in when entering fullscreen; must not receive touches when closed */}
       <Animated.View
         style={[styles.fullscreenOverlay, { paddingTop: headerTop }, overlayAnimatedStyle]}
-        pointerEvents="box-none"
+        pointerEvents={isFullScreen ? "box-none" : "none"}
       >
         <Pressable style={styles.fullscreenBackBtn} onPress={() => router.back()}>
           <MaterialIcons name="arrow-back" size={24} color={TEXT_PRIMARY} />
@@ -382,6 +759,16 @@ export default function WorkspaceScreen() {
           <MaterialIcons name="fullscreen-exit" size={24} color={TEXT_PRIMARY} />
         </Pressable>
       </Animated.View>
+
+      {/* Dedicated fullscreen expand button on top so first tap always works */}
+      {!isFullScreen && (
+        <Pressable
+          style={[styles.fullscreenExpandTouchTarget, { top: headerTop + 4 }]}
+          onPress={enterFullscreen}
+        >
+          <MaterialIcons name="fullscreen" size={22} color={PRIMARY} />
+        </Pressable>
+      )}
     </GestureHandlerRootView>
   );
 }
@@ -407,7 +794,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingBottom: 12,
+    paddingBottom: 10,
     backgroundColor: "rgba(255,255,255,0.9)",
     borderBottomWidth: 1,
     borderBottomColor: "rgba(218,27,97,0.1)",
@@ -439,6 +826,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  iconBtnSpacer: { width: 48, height: 48 },
   searchWrap: {
     position: "absolute",
     top: 120,
@@ -531,6 +919,19 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
+  fullscreenExpandTouchTarget: {
+    position: "absolute",
+    right: 16,
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: SURFACE,
+    borderWidth: 1,
+    borderColor: "rgba(218,27,97,0.1)",
+    alignItems: "center",
+    justifyContent: "center",
+    zIndex: 35,
+  },
   bottomSheet: {
     position: "absolute",
     left: 0,
@@ -580,6 +981,12 @@ const styles = StyleSheet.create({
   tabTextActive: { fontWeight: "700", color: PRIMARY },
   ordersScroll: { flex: 1 },
   ordersScrollContent: { padding: 16, gap: 12 },
+  ordersLoading: {
+    paddingVertical: 24,
+    alignItems: "center",
+    gap: 8,
+  },
+  ordersLoadingText: { fontSize: 13, color: SLATE_500, fontWeight: "600" },
   orderCard: {
     padding: 16,
     backgroundColor: SURFACE,
@@ -599,18 +1006,26 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: SLATE_400,
   },
+  orderAvatarPlaceholder: { alignItems: "center", justifyContent: "center" },
   orderName: { fontSize: 14, fontWeight: "700", color: TEXT_PRIMARY },
   orderMeta: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
   orderMetaText: { fontSize: 11, color: PRIMARY, fontWeight: "500" },
+  patissiereFrom: { fontSize: 10, color: SLATE_500, marginTop: 2 },
   orderRight: { alignItems: "flex-end" },
   orderPrice: { fontSize: 12, fontWeight: "700", color: PRIMARY },
   orderDistance: { fontSize: 10, color: SLATE_500, marginTop: 2 },
+  cardActionsRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginTop: 12,
+  },
   viewDetailsBtn: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 6,
-    marginTop: 12,
+    flex: 1,
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
@@ -619,6 +1034,17 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(218,27,97,0.06)",
   },
   viewDetailsBtnText: { fontSize: 13, fontWeight: "600", color: PRIMARY },
+  confirmOrderCardBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderRadius: 10,
+    backgroundColor: "#16a34a",
+  },
+  confirmOrderCardBtnText: { fontSize: 12, fontWeight: "700", color: "#fff" },
   backBtn: {
     position: "absolute",
     left: 8,

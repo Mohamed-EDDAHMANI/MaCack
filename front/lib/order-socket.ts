@@ -1,4 +1,5 @@
 import { io, Socket } from "socket.io-client";
+import { API_BASE_URL } from "@/lib/axios";
 
 let socket: Socket | null = null;
 
@@ -7,8 +8,8 @@ export function getOrderSocket(): Socket {
     return socket;
   }
 
-  // Use the same host as API (10.0.2.2:3000 for Android emulator)
-  socket = io("http://10.0.2.2:3000/orders", {
+  const base = API_BASE_URL.replace(/\/$/, "");
+  socket = io(`${base}/orders`, {
     transports: ["websocket"],
   });
 

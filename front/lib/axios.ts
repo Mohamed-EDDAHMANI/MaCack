@@ -20,6 +20,7 @@ function resolveBaseUrl(): string {
   //    e.g. "192.168.1.2:8081" — we extract just the IP part
   const debuggerHost =
     Constants.expoConfig?.hostUri ?? (Constants as any).manifest?.debuggerHost;
+  console.log(`[api] debuggerHost = ${debuggerHost}`);
   if (debuggerHost) {
     const ip = debuggerHost.split(":")[0]; // strip metro port
     return `http://${ip}:${DEFAULT_PORT}`;
@@ -30,8 +31,10 @@ function resolveBaseUrl(): string {
   if (envUrl) return envUrl;
 
   // 3) Platform-specific defaults (emulator / web)
+  const LAN_IP = "192.168.3.142"; // IP dyal PC dyalek
+
   if (Platform.OS === "android") {
-    return `http://10.0.2.2:${DEFAULT_PORT}`;
+    return `http://${LAN_IP}:${DEFAULT_PORT}`;
   }
   return `http://localhost:${DEFAULT_PORT}`;
 }

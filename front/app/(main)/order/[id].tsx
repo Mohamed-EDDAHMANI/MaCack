@@ -22,13 +22,19 @@ import {
   getClientOrdersApi,
   getClientOrderByIdApi,
   getPatissiereOrdersApi,
+  markDeliveredByClientApi,
   type ClientOrder,
   type ClientOrderItem,
 } from "@/store/features/order/orderApi";
 import { fetchProductByIdApi } from "@/store/features/catalog/catalogApi";
-import { buildPhotoUrl } from "@/lib/utils";
-import { useAppSelector } from "@/store/hooks";
+import { getProfileById } from "@/store/features/auth/authApi";
+import type { AuthUser } from "@/store/features/auth/authSlice";
+import { buildPhotoUrl, getProfilePath } from "@/lib/utils";
+import { useAppSelector, useAppDispatch } from "@/store/hooks";
 import { getOrderSocket } from "@/lib/order-socket";
+import { openEstimationPanel, closeEstimationPanel } from "@/store/features/estimation";
+import { OrderEstimationSection } from "@/components/order/OrderEstimationSection";
+import { EstimationCreateModal } from "@/components/order/EstimationCreateModal";
 
 type TimelineStep = "pending" | "accepted" | "payment" | "preparing" | "completed" | "delivering" | "delivered";
 
@@ -114,10 +120,14 @@ export default function OrderDetailsScreen() {
   const [error, setError] = useState<string | null>(null);
   const [order, setOrder] = useState<ClientOrder | null>(null);
   const [productById, setProductById] = useState<Record<string, ProductPreview>>({});
+  const [otherParty, setOtherParty] = useState<AuthUser | null>(null);
   const [accepting, setAccepting] = useState(false);
   const [actionError, setActionError] = useState<string | null>(null);
+  const [estimationsRefresh, setEstimationsRefresh] = useState(0);
   const authUserId = useAppSelector((state) => state.auth.user?.id ?? "");
   const authRole = (useAppSelector((state) => state.auth.user?.role) ?? "").toLowerCase();
+  const dispatch = useAppDispatch();
+  const estimationPanelOrderId = useAppSelector((state) => state.estimation.estimationPanelOrderId);
 
   const loadOrder = useCallback(async () => {
     if (!id) {
@@ -145,6 +155,19 @@ export default function OrderDetailsScreen() {
       }
 
       setOrder(found);
+
+      const otherPartyId = authRole === "patissiere" ? found.clientId : found.patissiereId;
+      if (otherPartyId) {
+        try {
+          const res = await getProfileById(otherPartyId);
+          if (res?.data?.user) setOtherParty(res.data.user);
+          else setOtherParty(null);
+        } catch {
+          setOtherParty(null);
+        }
+      } else {
+        setOtherParty(null);
+      }
 
       const uniqueProductIds = Array.from(new Set(found.items.map((it) => it.productId).filter(Boolean)));
       const previews: Record<string, ProductPreview> = {};
@@ -239,6 +262,9 @@ export default function OrderDetailsScreen() {
   const isPatissiereIncomingOrder = authRole === "patissiere" && order.patissiereId === authUserId;
   const showAcceptButton = isPatissiereIncomingOrder && order.status === "pending";
   const showCompleteButton = isPatissiereIncomingOrder && order.status === "preparing";
+  const isClientOrderCompleted = order.clientId === authUserId && order.status === "completed";
+  const showDeliveredByClientButton = isClientOrderCompleted;
+  const showStartDeliveryButton = isClientOrderCompleted;
 
   const handleAcceptOrder = async () => {
     if (!order || accepting) return;
@@ -277,6 +303,14 @@ export default function OrderDetailsScreen() {
           </View>
         </View>
 
+        {(order.status === "completed" || order.status === "delivering") && order.clientId === authUserId ? (
+          <OrderEstimationSection
+            orderId={order.id}
+            refetchTrigger={estimationsRefresh}
+            isClient={true}
+          />
+        ) : null}
+
         <View style={styles.deliveryCard}>
           <View style={styles.deliveryIcon}>
             <MaterialIcons name="delivery-dining" size={30} color={PRIMARY} />
@@ -286,6 +320,36 @@ export default function OrderDetailsScreen() {
             <Text style={styles.deliveryRange}>{formatDeliveryWindow(order.requestedDateTime)}</Text>
           </View>
         </View>
+
+        {otherParty ? (
+          <View style={styles.section}>
+            <Text style={styles.sectionTitle}>
+              {authRole === "patissiere" ? "Client" : "Patissiere"}
+            </Text>
+            <Pressable
+              style={styles.otherPartyCard}
+              onPress={() => router.push(getProfilePath(otherParty.id) as any)}
+            >
+              {buildPhotoUrl(otherParty.photo) ? (
+                <Image
+                  source={{ uri: buildPhotoUrl(otherParty.photo)! }}
+                  style={styles.otherPartyAvatar}
+                />
+              ) : (
+                <View style={[styles.otherPartyAvatar, styles.otherPartyAvatarPlaceholder]}>
+                  <MaterialIcons name="person" size={28} color={PRIMARY} />
+                </View>
+              )}
+              <View style={styles.otherPartyInfo}>
+                <Text style={styles.otherPartyName}>{otherParty.name}</Text>
+                {otherParty.city ? (
+                  <Text style={styles.otherPartyMeta}>{otherParty.city}</Text>
+                ) : null}
+              </View>
+              <MaterialIcons name="chevron-right" size={24} color={SLATE_400} />
+            </Pressable>
+          </View>
+        ) : null}
 
         {isPatissiereIncomingOrder ? (
           <View style={styles.section}>
@@ -432,6 +496,46 @@ export default function OrderDetailsScreen() {
               <Text style={styles.paymentActionText}>Pay Now</Text>
             </Pressable>
           ) : null}
+          {(showDeliveredByClientButton || showStartDeliveryButton) ? (
+            <View style={styles.twoButtonsRow}>
+              <Pressable
+                style={styles.deliveredByClientAction}
+                onPress={async () => {
+                  if (!order || accepting) return;
+                  try {
+                    setAccepting(true);
+                    setActionError(null);
+                    const updated = await markDeliveredByClientApi(order.id);
+                    if (updated) setOrder(updated);
+                    else await loadOrder();
+                  } catch (e: unknown) {
+                    setActionError(e instanceof Error ? e.message : "Failed to update");
+                  } finally {
+                    setAccepting(false);
+                  }
+                }}
+                disabled={accepting}
+              >
+                <MaterialIcons name="check-circle" size={18} color="#fff" />
+                <Text style={styles.twoBtnText} numberOfLines={1}>
+                  {accepting ? "Updating..." : "Make delivered"}
+                </Text>
+              </Pressable>
+              <Pressable
+                style={styles.startDeliveryAction}
+                onPress={() => {
+                  if (!order) return;
+                  dispatch(openEstimationPanel(order.id));
+                }}
+                disabled={accepting}
+              >
+                <MaterialIcons name="local-shipping" size={18} color="#fff" />
+                <Text style={styles.twoBtnText} numberOfLines={1}>
+                  Launch delivery
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
           <Pressable style={styles.primaryAction}>
             <MaterialIcons name="chat-bubble-outline" size={18} color="#fff" />
             <Text style={styles.primaryActionText}>
@@ -445,6 +549,15 @@ export default function OrderDetailsScreen() {
           {actionError ? <Text style={styles.actionErrorText}>{actionError}</Text> : null}
         </View>
       </ScrollView>
+      <EstimationCreateModal
+        visible={estimationPanelOrderId === order.id}
+        orderId={order.id}
+        onClose={() => dispatch(closeEstimationPanel())}
+        onSuccess={() => {
+          setEstimationsRefresh((k) => k + 1);
+          loadOrder();
+        }}
+      />
     </SafeAreaView>
   );
 }
@@ -595,6 +708,26 @@ const styles = StyleSheet.create({
   deliveryMeta: { fontSize: 10, color: SLATE_500, fontWeight: "700", textTransform: "uppercase", letterSpacing: 0.6 },
   deliveryRange: { marginTop: 2, fontSize: 14, color: TEXT_PRIMARY, fontWeight: "800" },
   section: { marginTop: 20 },
+  otherPartyCard: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    backgroundColor: SURFACE,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: BORDER_SUBTLE,
+    padding: 12,
+  },
+  otherPartyAvatar: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: SLATE_200,
+  },
+  otherPartyAvatarPlaceholder: { alignItems: "center", justifyContent: "center" },
+  otherPartyInfo: { flex: 1 },
+  otherPartyName: { fontSize: 16, fontWeight: "700", color: TEXT_PRIMARY },
+  otherPartyMeta: { fontSize: 12, color: SLATE_500, marginTop: 2 },
   requestCard: {
     backgroundColor: SURFACE,
     borderRadius: 12,
@@ -699,6 +832,40 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   paymentActionText: { color: "#fff", fontSize: 14, fontWeight: "800" },
+  twoButtonsRow: {
+    flexDirection: "row",
+    gap: 12,
+  },
+  deliveredByClientAction: {
+    flex: 1,
+    minWidth: 0,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: "#0d9488",
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  startDeliveryAction: {
+    flex: 1,
+    minWidth: 0,
+    height: 50,
+    borderRadius: 12,
+    backgroundColor: PRIMARY,
+    alignItems: "center",
+    justifyContent: "center",
+    flexDirection: "row",
+    gap: 6,
+    paddingHorizontal: 8,
+  },
+  twoBtnText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "700",
+    flexShrink: 1,
+  },
   primaryAction: {
     height: 50,
     borderRadius: 12,

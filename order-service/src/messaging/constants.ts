@@ -14,4 +14,11 @@ export const ORDERS_PATTERNS = {
   ORDER_ITEM_FIND_ONE: 'orders/order-item/find-one',
   ORDER_ITEM_UPDATE: 'orders/order-item/update',
   ORDER_ITEM_REMOVE: 'orders/order-item/remove',
+  ESTIMATION_CLIENT_CREATE: 'estimation/client',
+  ESTIMATION_DELIVERY_CREATE: 'estimation/delivery',
+  ESTIMATION_FIND_BY_ORDER: 'estimation/find-by-order',
+  ESTIMATION_FIND_PENDING_CLIENT: 'estimation/find-pending-client',
+  ESTIMATION_CONFIRM: 'estimation/confirm',
+  ESTIMATION_FIND_ACCEPTED_DELIVERY: 'estimation/find-accepted-delivery',
+  ESTIMATION_FIND_ESTIMATED_DELIVERY: 'estimation/find-estimated-delivery',
 } as const;

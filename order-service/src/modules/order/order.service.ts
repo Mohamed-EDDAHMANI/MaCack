@@ -16,6 +16,7 @@ import { io } from 'socket.io-client';
 export class OrderService {
   private buildOrderFilterByRole(userId: string, role: string) {
     const normalizedRole = (role || '').toLowerCase();
+    if (normalizedRole === 'delivery' || normalizedRole === 'livreur') return {}; // delivery/livreur can view any order by id (e.g. from available list)
     const isPatissiere = normalizedRole === 'patissiere';
 
     return isPatissiere
@@ -124,6 +125,9 @@ export class OrderService {
       status: OrderStatus.PENDING,
       changedAt: new Date(),
     });
+
+    // 4. Emit real-time event so patissiere sees new order without refresh
+    this.emitOrderStatusChanged(String(order._id), OrderStatus.PENDING);
 
     return {
       success: true,
@@ -397,6 +401,122 @@ export class OrderService {
     return {
       success: true,
       message: 'Order payment marked successfully',
+      data: await this.mapOrderDocument(order as any),
+    };
+  }
+
+  /**
+   * Client picked up order at patissiere → mark as delivered.
+   */
+  async markDeliveredByClient(orderId: string, clientId: string) {
+    if (!orderId || !clientId) {
+      throw new BadRequestException('Missing order id or client id');
+    }
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Invalid order id');
+    }
+
+    const order = await this.orderModel.findOne({
+      _id: new Types.ObjectId(orderId),
+      clientId,
+    });
+
+    if (!order) {
+      return { success: false, message: 'Order not found', data: null };
+    }
+
+    if (order.status !== OrderStatus.COMPLETED) {
+      return {
+        success: true,
+        message: 'Order is not in completed state',
+        data: await this.mapOrderDocument(order as any),
+      };
+    }
+
+    order.status = OrderStatus.DELIVERED;
+    await order.save();
+
+    await this.orderStatusHistoryModel.create({
+      orderId: order._id,
+      status: OrderStatus.DELIVERED,
+      changedAt: new Date(),
+    });
+
+    this.emitOrderStatusChanged(String(order._id), OrderStatus.DELIVERED);
+
+    return {
+      success: true,
+      message: 'Order marked as delivered (picked up by client)',
+      data: await this.mapOrderDocument(order as any),
+    };
+  }
+
+  /**
+   * Internal: get order clientId and status by id (e.g. for estimation flow).
+   */
+  async getOrderByIdForInternal(orderId: string): Promise<{ clientId: string; status: OrderStatus } | null> {
+    if (!orderId || !Types.ObjectId.isValid(orderId)) return null;
+    const order = await this.orderModel
+      .findById(orderId)
+      .select('clientId status')
+      .lean()
+      .exec();
+    if (!order) return null;
+    return { clientId: (order as any).clientId, status: (order as any).status };
+  }
+
+  /**
+   * Internal: get full order with items by id (e.g. for delivery available estimations).
+   */
+  async getOrderWithItemsById(orderId: string) {
+    if (!orderId || !Types.ObjectId.isValid(orderId)) return null;
+    const order = await this.orderModel.findById(orderId).exec();
+    if (!order) return null;
+    return this.mapOrderDocument(order as any);
+  }
+
+  /**
+   * Client requests delivery → move to delivering (livreur to be assigned).
+   */
+  async startDelivery(orderId: string, clientId: string) {
+    if (!orderId || !clientId) {
+      throw new BadRequestException('Missing order id or client id');
+    }
+    if (!Types.ObjectId.isValid(orderId)) {
+      throw new BadRequestException('Invalid order id');
+    }
+
+    const order = await this.orderModel.findOne({
+      _id: new Types.ObjectId(orderId),
+      clientId,
+    });
+
+    if (!order) {
+      return { success: false, message: 'Order not found', data: null };
+    }
+
+    if (order.status !== OrderStatus.COMPLETED) {
+      return {
+        success: true,
+        message: 'Order is not in completed state',
+        data: await this.mapOrderDocument(order as any),
+      };
+    }
+
+    order.status = OrderStatus.DELIVERING;
+    await order.save();
+
+    await this.orderStatusHistoryModel.create({
+      orderId: order._id,
+      status: OrderStatus.DELIVERING,
+      changedAt: new Date(),
+    });
+
+    this.emitOrderStatusChanged(String(order._id), OrderStatus.DELIVERING);
+
+    return {
+      success: true,
+      message: 'Order sent for delivery',
       data: await this.mapOrderDocument(order as any),
     };
   }

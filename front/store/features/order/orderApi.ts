@@ -82,3 +82,15 @@ export async function completeOrderApi(orderId: string): Promise<ClientOrder | n
   const res = await api.post(`/s3/order/complete/${orderId}`);
   return res.data?.data ?? null;
 }
+
+/** Client picked up order at patissiere → mark as delivered */
+export async function markDeliveredByClientApi(orderId: string): Promise<ClientOrder | null> {
+  const res = await api.post(`/s3/order/delivered-by-client/${orderId}`);
+  return res.data?.data ?? null;
+}
+
+/** Client requests delivery → order sent for delivery (livreur) */
+export async function startDeliveryApi(orderId: string): Promise<ClientOrder | null> {
+  const res = await api.post(`/s3/order/start-delivery/${orderId}`);
+  return res.data?.data ?? null;
+}

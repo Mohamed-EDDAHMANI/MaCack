@@ -19,5 +19,6 @@ import { OrderItem, OrderItemSchema } from '../../infrastructure/database/schema
   ],
   controllers: [OrderController],
   providers: [OrderService],
+  exports: [OrderService],
 })
 export class OrderModule {}

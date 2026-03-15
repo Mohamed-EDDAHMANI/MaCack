@@ -1,13 +1,17 @@
 /**
  * Builds Leaflet/OpenStreetMap HTML for the livreur workspace.
- * Shows user's current location with a "You" marker (same map style as register).
+ * Shows user's current location and optional delivery markers (client delivery point, patissiere).
  */
 const OSM_DEFAULT = { lat: 31.7917, lng: -7.0926 };
 
+export type MapMarker = { lat: number; lng: number; label: string };
+
 export function buildWorkspaceMapHtml(
   userLat: number,
-  userLng: number
+  userLng: number,
+  markers: MapMarker[] = []
 ): string {
+  const markersJson = JSON.stringify(markers);
   return `
 <!DOCTYPE html>
 <html>
@@ -26,6 +30,7 @@ export function buildWorkspaceMapHtml(
   <script>
     var userLat = ${userLat};
     var userLng = ${userLng};
+    var markers = ${markersJson};
     var center = [userLat, userLng];
     var map = L.map('map', { zoomControl: false }).setView(center, 14);
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
@@ -40,6 +45,16 @@ export function buildWorkspaceMapHtml(
       iconAnchor: [12, 12]
     });
     L.marker([userLat, userLng], { icon: youIcon }).addTo(map);
+
+    markers.forEach(function(m) {
+      var icon = L.divIcon({
+        className: 'delivery-marker',
+        html: '<div style="width:20px;height:20px;border-radius:50%;background:#0d9488;border:2px solid #fff;box-shadow:0 2px 6px rgba(0,0,0,.25);"></div><div style="margin-top:2px;background:#0d9488;color:#fff;font-size:9px;font-weight:bold;padding:1px 4px;border-radius:999px;white-space:nowrap;">' + (m.label || '') + '</div>',
+        iconSize: [20, 30],
+        iconAnchor: [10, 10]
+      });
+      L.marker([m.lat, m.lng], { icon: icon }).addTo(map);
+    });
   </script>
 </body>
 </html>

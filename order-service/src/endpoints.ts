@@ -13,12 +13,20 @@ export const ORDERS_ENDPOINTS = [
     roles: ['patissiere', 'admin'],
   },
   {
+    pattern: /^\/order\/delivered-by-client\/.*$/,
+    roles: ['client', 'admin'],
+  },
+  {
+    pattern: /^\/order\/start-delivery\/.*$/,
+    roles: ['client', 'admin'],
+  },
+  {
     pattern: /^\/orders\/find-all$/,
     roles: ['client', 'patissiere', 'admin'],
   },
   {
-    pattern: /^\/order\/find-one\/.*$/, // Matches /order/find-one/:id
-    roles: ['client', 'patissiere', 'admin'],
+    pattern: /^\/order\/find-one\/.*$/, // Matches /order/find-one/:id (delivery/livreur = same role)
+    roles: ['client', 'patissiere', 'delivery', 'livreur', 'admin'],
   },
   {
     pattern: /^\/orders\/patissiere\/find-all$/,
@@ -51,6 +59,34 @@ export const ORDERS_ENDPOINTS = [
   {
     pattern: /^\/order-item\/remove\/.*$/,
     roles: ['admin'],
+  },
+  {
+    pattern: /^\/estimation\/client$/,
+    roles: ['client', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/delivery$/,
+    roles: ['delivery', 'livreur', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/find-by-order\/.*$/,
+    roles: ['client', 'patissiere', 'delivery', 'livreur', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/find-pending-client$/,
+    roles: ['delivery', 'livreur', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/confirm\/.*$/,
+    roles: ['delivery', 'livreur', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/find-accepted-delivery$/,
+    roles: ['delivery', 'livreur', 'admin'],
+  },
+  {
+    pattern: /^\/estimation\/find-estimated-delivery$/,
+    roles: ['delivery', 'livreur', 'admin'],
   },
 ];
 
